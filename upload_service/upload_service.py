@@ -1,6 +1,5 @@
 from fastapi import FastAPI, File, UploadFile, HTTPException
-from fastapi.responses import JSONResponse
-from minio_client import client, bucket_name
+from minio_data_store.minio_client import client, bucket_name
 import uuid
 import io
 

@@ -241,7 +241,7 @@ celerybeat.pid
 *.sage.py
 
 # Environments
-UploadService/.env
+.env
 .venv
 env/
 venv/
