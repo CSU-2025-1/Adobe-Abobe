@@ -1,0 +1,31 @@
+version: '3.8'
+
+services:
+  auth-service:
+    build: ./auth_service
+    ports:
+      - "50001:50001"
+    env_file:
+      - ./auth_service/.env
+    depends_on:
+      - redis
+      - postgres
+
+  redis:
+    image: redis:latest
+    ports:
+      - "6379:6379"
+
+  postgres:
+    image: postgres:17
+    environment:
+      POSTGRES_DB: authservicedb
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: 123
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+volumes:
+  postgres_data:

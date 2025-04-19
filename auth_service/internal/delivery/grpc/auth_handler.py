@@ -1,8 +1,10 @@
-from auth_service.api.auth import auth_pb2, auth_pb2_grpc
+from api.auth import auth_pb2, auth_pb2_grpc
 import bcrypt, jwt
 import os
 
-SECRET = os.getenv("JWT_SECRET", "secret")
+from config.config import config
+
+SECRET = os.getenv("JWT_SECRET", config.jwt_secret)
 
 class AuthService(auth_pb2_grpc.AuthServiceServicer):
     def __init__(self, pg_repo, redis_repo):

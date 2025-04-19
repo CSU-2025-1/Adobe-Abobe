@@ -19,12 +19,25 @@ class PostgresRepo:
         print("Таблица users проверена/создана.")
 
     def create_user(self, login, password_hash):
-        with self.conn.cursor() as cur:
-            cur.execute("INSERT INTO users (login, password_hash) VALUES (%s, %s) RETURNING id", (login, password_hash))
+        try:
+            cursor = self.conn.cursor()
+            cursor.execute(
+                "INSERT INTO users (login, password_hash) VALUES (%s, %s) RETURNING id",
+                (login, password_hash)
+            )
+            user_id = cursor.fetchone()[0]
             self.conn.commit()
-            return cur.fetchone()[0]
+            return user_id
+        except Exception as e:
+            self.conn.rollback()
+            raise e
+
 
     def get_user_by_login(self, login):
-        with self.conn.cursor() as cur:
-            cur.execute("SELECT id, password_hash FROM users WHERE login=%s", (login,))
-            return cur.fetchone()
+        try:
+            cursor = self.conn.cursor()
+            cursor.execute("SELECT id, password_hash FROM users WHERE login=%s", (login,))
+            return cursor.fetchone()
+        except Exception as e:
+            self.conn.rollback()  # ВАЖНО!
+            raise e

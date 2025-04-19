@@ -1,21 +1,23 @@
 from concurrent import futures
 import grpc
 import psycopg2
-from auth_service.internal.repository.postgres_repo import PostgresRepo
-from auth_service.internal.repository.redis_repo import RedisRepo
-from auth_service.internal.delivery.grpc.auth_handler import AuthService
-from auth_service.api.auth import auth_pb2_grpc
+
+from config.config import config
+from internal.repository.postgres_repo import PostgresRepo
+from internal.repository.redis_repo import RedisRepo
+from internal.delivery.grpc.auth_handler import AuthService
+from api.auth import auth_pb2_grpc
 from psycopg2.extensions import ISOLATION_LEVEL_AUTOCOMMIT
 
+dbname = config.db_name
+user = config.db_user
+password = config.db_password
+host = config.db_host
 
+#временно внутри сервиса инициализации потом проcто в докере отделельно
 def create_database_if_not_exists():
-    dbname = "authservicedb"
-    user = "postgres"
-    password = "123"
-    host = "localhost"
-
     # подключение к постгре
-    conn = psycopg2.connect(dbname="postgres", user=user, password=password, host=host)
+    conn = psycopg2.connect(dbname=dbname, user=user, password=password, host=host)
     conn.set_isolation_level(ISOLATION_LEVEL_AUTOCOMMIT)
     cursor = conn.cursor()
 
@@ -23,9 +25,9 @@ def create_database_if_not_exists():
     exists = cursor.fetchone()
     if not exists:
         cursor.execute(f"CREATE DATABASE {dbname}")
-        print(f"✅ База {dbname} создана.")
+        print(f"База {dbname} создана.")
     else:
-        print(f"📦 База {dbname} уже существует.")
+        print(f"База {dbname} уже существует.")
     cursor.close()
     conn.close()
 
@@ -35,13 +37,13 @@ create_database_if_not_exists()
 
 
 # подключение к бд
-conn = psycopg2.connect(dbname="authservicedb", user="postgres", password="123", host="localhost")
+conn = psycopg2.connect(dbname=dbname, user=user, password=password, host=host)
 pg_repo = PostgresRepo(conn)
 pg_repo.init_schema()
 redis_repo = RedisRepo()
 
 server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))
 auth_pb2_grpc.add_AuthServiceServicer_to_server(AuthService(pg_repo, redis_repo), server)
-server.add_insecure_port("[::]:50001")
+server.add_insecure_port(f"[::]:{config.grpc_port}")
 server.start()
 server.wait_for_termination()
