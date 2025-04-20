@@ -39,5 +39,5 @@ class PostgresRepo:
             cursor.execute("SELECT id, password_hash FROM users WHERE login=%s", (login,))
             return cursor.fetchone()
         except Exception as e:
-            self.conn.rollback()  # ВАЖНО!
+            self.conn.rollback()
             raise e
