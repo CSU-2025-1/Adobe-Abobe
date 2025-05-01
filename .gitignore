@@ -295,7 +295,6 @@ pyrightconfig.json
 *.env
 /train_model
 *.json
-*.txt
 *.png
 *.safetensors
 *.pyc
