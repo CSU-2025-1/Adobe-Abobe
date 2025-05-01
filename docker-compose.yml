@@ -21,6 +21,16 @@ services:
       - redis
       - minio
 
+  filter-service:
+    build: ./filter_service
+    ports:
+      - "50051:50051"
+    env_file:
+      - ./filter_service/.env
+    depends_on:
+      - redis
+      - minio
+
   redis:
     image: redis:latest
     ports:
