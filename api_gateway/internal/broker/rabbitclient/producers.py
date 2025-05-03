@@ -58,7 +58,7 @@ async def send_auth_message(token: str):
 
 async def send_image_message(upload_request: UploadRequest):
     payload = {
-        "file_data": upload_request.file_data,
+        "file_data": upload_request.content,
         "file_name": upload_request.file_name,
         "content_type": upload_request.content_type,
         "user_id": upload_request.user_id,
