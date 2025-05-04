@@ -2,6 +2,9 @@ from fastapi import APIRouter, Query, HTTPException, UploadFile, File
 from internal.core.entity.auth import AuthRequest
 from internal.core.entity.upload import UploadRequest
 from lib.rabbitclient.producers import send_auth_message, send_authorization_message, send_image_message
+from internal.core.entity.filter.filter_dto import FilterRequest
+
+from api_gateway.internal.broker.rabbitclient.producers import send_filters_message
 
 router = APIRouter()
 
@@ -73,14 +76,20 @@ async def download_file(token: str, image_id: int):
 
 
 # Edit Photo
-@router.post("/editphoto/filter/{filter_id}")
-async def edit_photo_with_param(filter_id: str, param: str = Query(...)):
-    pass
+@router.post("/editphoto/filter/")
+async def apply_filter(token: str, data: FilterRequest):
+    auth_validate = await send_auth_message(token)
 
-
-@router.post("/editphoto/filter/{filter_id}")
-async def edit_photo_null_param(filter_id: str):
-    pass
+    if auth_validate["valid"]:
+        try:
+            response = await send_filters_message(data)
+            return {
+                "filtered_url": response["filtered_url"]
+            }
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"error: {str(e)}")
+    else:
+        raise HTTPException(status_code=401, detail="Invalid token")
 
 
 # VCS

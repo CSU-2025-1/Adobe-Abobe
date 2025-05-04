@@ -8,6 +8,7 @@ from lib.rabbitclient.client import get_channel
 AUTH_RESPONSE_QUEUE = "auth_response"
 TOKEN_QUEUE = "token"
 IMAGE_ID_QUEUE = "image_id"
+FILTERED_IMAGE_QUEUE = "filtered_image"
 
 
 async def wrap_consumer(consumer_fn, name):
@@ -44,4 +45,9 @@ async def get_token(channel: aio_pika.channel):
 
 async def get_uploaded_image_id(channel: aio_pika.channel):
     response = await wait_for_response(channel, IMAGE_ID_QUEUE)
+    return response
+
+
+async def get_filtered_image(channel: aio_pika.channel):
+    response = await wait_for_response(channel, FILTERED_IMAGE_QUEUE)
     return response
