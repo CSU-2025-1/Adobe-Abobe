@@ -1,7 +1,7 @@
 import React from "react";
 import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
-import AuthPage from "../src/Pages/Auth";
-import PhotoUploadPage from "../src/Pages/Home";
+import AuthPage from "./Pages/Auth";
+import PhotoUploadPage from "./Pages/Home";
 
 function App() {
   const isAuthenticated = localStorage.getItem("isAuthenticated") === "true";
