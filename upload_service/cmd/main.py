@@ -1,7 +1,4 @@
 import asyncio
-import grpc
-from api import upload_pb2_grpc
-from internal.delivery.grpc.handler import UploadService
 from internal.broker.rabbitclient.workers import wrap_consumer
 from internal.broker.rabbitclient.workers import consume_images_data
 

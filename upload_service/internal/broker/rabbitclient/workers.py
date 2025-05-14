@@ -3,7 +3,7 @@ import logging
 import aio_pika
 import json
 
-from lib.rabbitclient.client import get_channel
+from internal.broker.rabbitclient.client import get_channel
 from internal.broker.rabbitclient.producers import send_image_id_message
 from upload_service.internal.core.entity.image import Image
 from upload_service.internal.core.usecase.upload import handle_upload

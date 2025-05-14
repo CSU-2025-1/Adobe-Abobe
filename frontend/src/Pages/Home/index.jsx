@@ -6,20 +6,21 @@ import {
   HiddenInput,
   Button,
   MainContent,
-  Sidebar,
   ImageArea,
   ImageWrapper,
   PreviewImage,
   Placeholder,
-  SliderWrapper,
-  Slider, ArrowForwardButton, ArrowBackButton
+  SlidersBlock,
+  SliderGroup,
+  SliderLabel,
+  Slider,
+  ArrowForwardButton,
+  ArrowBackButton,
 } from './styles';
 import axios from 'axios';
 
 export default function PhotoUploadPage() {
   const [image, setImage] = useState(null);
-
-
 
   const handleUpload = async (e) => {
     const selectedFile = e.target.files[0];
@@ -60,30 +61,29 @@ export default function PhotoUploadPage() {
       </TopButtons>
 
       <MainContent>
-        <Sidebar>Здесь будут пресеты</Sidebar>
-
         <ImageArea>
           <ImageWrapper>
             {image ? (
-              <PreviewImage
-                src={image}
-                alt="Загруженное изображение"
-
-              />
+              <PreviewImage src={image} alt="Загруженное изображение" />
             ) : (
               <Placeholder>Изображение не загружено</Placeholder>
             )}
           </ImageWrapper>
 
-          <SliderWrapper>
-            <Slider
-              type="range"
-              min="0"
-              max="200"
-
-              orient="vertical"
-            />
-          </SliderWrapper>
+          <SlidersBlock>
+            <SliderGroup>
+              <SliderLabel>Яркость</SliderLabel>
+              <Slider type="range" min="0" max="20" orient="horizontal" />
+            </SliderGroup>
+            <SliderGroup>
+              <SliderLabel>Контраст</SliderLabel>
+              <Slider type="range" min="0" max="20" orient="horizontal" />
+            </SliderGroup>
+            <SliderGroup>
+              <SliderLabel>Блюр</SliderLabel>
+              <Slider type="range" min="0" max="20" orient="horizontal" />
+            </SliderGroup>
+          </SlidersBlock>
         </ImageArea>
       </MainContent>
     </Container>

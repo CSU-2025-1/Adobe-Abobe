@@ -6,7 +6,6 @@ import asyncio
 
 bucket_name = "images"
 
-# Создаем клиента для MinIO
 s3_client = boto3.client(
     "s3",
     endpoint_url=f"http://{MINIO_ENDPOINT}",

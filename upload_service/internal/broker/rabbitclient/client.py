@@ -1,7 +1,7 @@
 import aio_pika
-from config.config import cfg
+from config.config import RABBITMQ_USER, RABBITMQ_PASS, RABBITMQ_HOST, RABBITMQ_PORT
 
-RABBIT_URL = f"amqp://{cfg.RABBITMQ_USER}:{cfg.RABBITMQ_PASS}@{cfg.RABBITMQ_HOST}:{cfg.RABBITMQ_PORT}/"
+RABBIT_URL = f"amqp://{RABBITMQ_USER}:{RABBITMQ_PASS}@{RABBITMQ_HOST}:{RABBITMQ_PORT}/"
 _connection = None
 
 

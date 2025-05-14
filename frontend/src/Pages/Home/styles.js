@@ -46,29 +46,25 @@ export const MainContent = styled.div`
   max-width: 100%;
 `;
 
-export const Sidebar = styled.div`
-  width: 150px;
-  border: 1px solid #ccc;
-  border-radius: 8px;
-  padding: 20px;
-  margin-right: 20px;
-`;
-
 export const ImageArea = styled.div`
   display: flex;
-  align-items: center;
+  align-items: flex-start;
 `;
 
 export const ImageWrapper = styled.div`
-  width: 1400px;
-  height: 700px;
+  width: 1600px; 
+  height: 790px; 
   border-radius: 10px;
   overflow: hidden;
   display: flex;
   justify-content: center;
   align-items: center;
-  margin-right: 20px;
+  margin-right: 40px;
+
+  border: 2px solid #ccc;
+  background-color: #f5f5f5;
 `;
+
 
 export const Placeholder = styled.div`
   color: #777;
@@ -81,18 +77,55 @@ export const PreviewImage = styled.img`
   display: block;
 `;
 
-export const SliderWrapper = styled.div`
-  height: 700px;
+
+export const Slider = styled.input`
+  width: 200px;
+  height: 6px;
+  appearance: none;
+  background: #ccc;
+  border-radius: 4px;
+  outline: none;
+  cursor: pointer;
+
+  &::-webkit-slider-thumb {
+    appearance: none;
+    width: 16px;
+    height: 16px;
+    background: #007bff;
+    border-radius: 50%;
+    cursor: pointer;
+    margin-top: -5px;
+  }
+
+  &::-moz-range-thumb {
+    width: 16px;
+    height: 16px;
+    background: #007bff;
+    border-radius: 50%;
+    cursor: pointer;
+  }
+`;
+
+export const SlidersBlock = styled.div`
   display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 40px;
+  height: 700px;
+`;
+
+export const SliderGroup = styled.div`
+  display: flex;
+  flex-direction: column;
   align-items: center;
 `;
 
-export const Slider = styled.input`
-  writing-mode: bt-lr;
-  -webkit-appearance: slider-vertical;
-  height: 500px;
-  width: 20px;
+export const SliderLabel = styled.div`
+  margin-bottom: 10px;
+  font-size: 16px;
+  font-weight: bold;
 `;
+
 
 export const ArrowBackButton = styled.button`
   width: 42px;
