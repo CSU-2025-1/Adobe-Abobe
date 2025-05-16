@@ -15,6 +15,10 @@ class Config:
     redis_host: str = os.getenv("REDIS_HOST")
     redis_port: str = os.getenv("REDIS_PORT")
     grpc_port: int = int(os.getenv("GRPC_PORT"))
+    rabbit_user: str = os.getenv("RABBITMQ_USER")
+    rabbit_pass: str = os.getenv("RABBITMQ_PASS")
+    rabbit_host: str = os.getenv("RABBITMQ_HOST")
+    rabbit_port: str = os.getenv("RABBITMQ_PORT")
 
 
 config = Config()

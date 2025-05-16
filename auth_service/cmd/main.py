@@ -4,6 +4,7 @@ import grpc
 import psycopg2
 
 from config.config import config
+from internal.core.usecase.auth_core import AuthCore
 from internal.repository.postgres_repo import PostgresRepo
 from internal.repository.redis_repo import RedisRepo
 from internal.delivery.grpc.auth_handler import AuthService
@@ -14,6 +15,27 @@ from internal.broker.rabbitclient.workers import check_authorization, give_token
 
 
 async def main():
+    # DBInit.create_database_if_not_exists()
+    #
+    # conn = psycopg2.connect(
+    #     dbname=config.db_name,
+    #     user=config.db_user,
+    #     password=config.db_password,
+    #     host=config.db_host
+    # )
+    #
+    # pg_repo = PostgresRepo(conn)
+    # pg_repo.init_schema()
+    # redis_repo = RedisRepo()
+    #
+    # auth_core = AuthCore(pg_repo, redis_repo)
+    #
+    # # Оборачиваем с передачей зависимостей
+    # await asyncio.gather(
+    #     wrap_consumer(lambda ch: check_authorization(ch, auth_core), "check_authorization"),
+    #     wrap_consumer(lambda ch: give_token(ch, auth_core), "give_token"),
+    # )
+
     dbname = config.db_name
     user = config.db_user
     password = config.db_password
@@ -28,11 +50,18 @@ async def main():
     pg_repo.init_schema()
     redis_repo = RedisRepo()
 
-    # Здесь крутятся воркеры для приёма сообщений
+    auth_core = AuthCore(pg_repo, redis_repo)
+
     await asyncio.gather(
-        wrap_consumer(check_authorization, "check_authorization"),
-        wrap_consumer(give_token, "give_token"),
+        wrap_consumer(lambda ch: check_authorization(ch, auth_core), "check_authorization"),
+        wrap_consumer(lambda ch: give_token(ch, auth_core), "give_token"),
     )
+
+    # # Здесь крутятся воркеры для приёма сообщений
+    # await asyncio.gather(
+    #     wrap_consumer(check_authorization, "check_authorization"),
+    #     wrap_consumer(give_token, "give_token"),
+    # )
 
     # server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))
     # auth_pb2_grpc.add_AuthServiceServicer_to_server(AuthService(pg_repo, redis_repo), server)
