@@ -3,8 +3,7 @@ from internal.core.entity.auth import AuthRequest
 from internal.core.entity.upload import UploadRequest
 from lib.rabbitclient.producers import send_auth_message, send_authorization_message, send_image_message
 from internal.core.entity.filter.filter_dto import FilterRequest
-
-from api_gateway.internal.broker.rabbitclient.producers import send_filters_message
+from internal.broker.rabbitclient.producers import send_filters_message
 
 router = APIRouter()
 
