@@ -1,11 +1,12 @@
 import asyncio
-from grpc.aio import server as grpc_aio_server
-from api.filter import filter_pb2_grpc
-from internal.delivery.grpc.filter_handler import FilterServiceServicer
-from config.config import config
+import logging
 
-from internal.broker.rabbitclient.client import get_channel
-from internal.broker.rabbitclient.producers import send_filtered_image_message
+from internal.broker.rabbitclient.workers import wrap_consumer, consume_filters
+
+logging.basicConfig(
+    level=logging.DEBUG,  # или INFO
+    format="%(asctime)s [%(levelname)s] %(message)s",
+)
 
 
 async def serve() -> None:
@@ -17,9 +18,8 @@ async def serve() -> None:
     # await server.start()
     # await server.wait_for_termination()
 
-    channel = await get_channel()
     await asyncio.gather(
-        send_filtered_image_message(channel),
+        wrap_consumer(consume_filters, "consume_filters"),
     )
 
 

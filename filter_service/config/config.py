@@ -12,5 +12,10 @@ class Config:
     s3_region: str = os.getenv("S3_REGION")
     grpc_port: int = int(os.getenv("GRPC_PORT"))
 
+    RABBITMQ_HOST = os.getenv('RABBITMQ_HOST')
+    RABBITMQ_USER = os.getenv('RABBITMQ_USER')
+    RABBITMQ_PASS = os.getenv('RABBITMQ_PASS')
+    RABBITMQ_PORT = os.getenv('RABBITMQ_PORT')
+
 
 config = Config()
