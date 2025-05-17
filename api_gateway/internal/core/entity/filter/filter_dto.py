@@ -1,6 +1,11 @@
 from pydantic import BaseModel
 
 
+class FilterConfig(BaseModel):
+    type: str
+    value: float
+
+
 class FilterRequest(BaseModel):
     image_id: str
-    filters: dict[str, float]
+    filter: FilterConfig

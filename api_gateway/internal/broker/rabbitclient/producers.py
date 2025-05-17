@@ -2,13 +2,13 @@ import json
 import logging
 import aio_pika
 
-from lib.rabbitclient.client import get_channel
-from lib.rabbitclient.workers import get_token, validate_token, get_uploaded_image_id
-from internal.core.entity.auth import AuthRequest
-from internal.core.entity.upload import UploadRequest
+from internal.broker.rabbitclient.client import get_channel
+from internal.broker.rabbitclient.workers import get_token, validate_token, get_uploaded_image_id, get_filtered_image
+from internal.core.entity.auth.auth_dto import AuthRequest
+from internal.core.entity.upload.upload_dto import UploadRequest
 from tenacity import retry, stop_after_attempt, wait_fixed
 from internal.core.entity.filter.filter_dto import FilterRequest
-from internal.broker.rabbitclient.workers import get_filtered_image
+
 
 AUTH_REQUEST_QUEUE = "auth_request"
 AUTHORIZATION_QUEUE = "authorization"
@@ -81,7 +81,10 @@ async def send_image_message(upload_request: UploadRequest):
 async def send_filters_message(filter_request: FilterRequest):
     payload = {
         "image_id": filter_request.image_id,
-        "filters": filter_request.filters,
+        "filter": {
+            "type": filter_request.filter.type,
+            "value": filter_request.filter.value
+        }
     }
 
     try:

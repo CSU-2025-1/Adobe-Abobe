@@ -3,7 +3,7 @@ import logging
 import aio_pika
 import json
 
-from lib.rabbitclient.client import get_channel
+from internal.broker.rabbitclient.client import get_channel
 
 AUTH_RESPONSE_QUEUE = "auth_response"
 TOKEN_QUEUE = "token"
