@@ -1,5 +1,8 @@
+import asyncio
 import json
 import logging
+import uuid
+
 import aio_pika
 
 from internal.broker.rabbitclient.client import get_channel
@@ -9,21 +12,40 @@ from internal.core.entity.upload.upload_dto import UploadRequest
 from tenacity import retry, stop_after_attempt, wait_fixed
 from internal.core.entity.filter.filter_dto import FilterRequest
 
-
 AUTH_REQUEST_QUEUE = "auth_request"
 AUTHORIZATION_QUEUE = "authorization"
 UPLOAD_IMAGE_REQUEST_QUEUE = "upload_image"
 FILTER_REQUEST_QUEUE = "filter"
 
 
-@retry(stop=stop_after_attempt(3), wait=wait_fixed(5))
-async def publish(routing_key: str, payload: dict):
+async def publish_rpc(routing_key: str, payload: dict, timeout: float = 5.0):
     channel = await get_channel()
-    message = json.dumps(payload).encode()
+
+    callback_queue = await channel.declare_queue(exclusive=True, auto_delete=True)
+    correlation_id = str(uuid.uuid4())
+
+    future = asyncio.get_event_loop().create_future()
+
+    async def on_response(message: aio_pika.IncomingMessage):
+        if message.correlation_id == correlation_id:
+            future.set_result(json.loads(message.body.decode()))
+            await message.ack()
+
+    await callback_queue.consume(on_response)
+
     await channel.default_exchange.publish(
-        aio_pika.Message(body=message),
-        routing_key=routing_key
+        aio_pika.Message(
+            body=json.dumps(payload).encode(),
+            reply_to=callback_queue.name,
+            correlation_id=correlation_id,
+        ),
+        routing_key=routing_key,
     )
+
+    try:
+        return await asyncio.wait_for(future, timeout=timeout)
+    except asyncio.TimeoutError:
+        raise Exception("RPC timeout")
 
 
 async def send_authorization_message(auth_request: AuthRequest):
@@ -31,16 +53,7 @@ async def send_authorization_message(auth_request: AuthRequest):
         "login": auth_request.login,
         "password": auth_request.password,
     }
-
-    try:
-        await publish(AUTHORIZATION_QUEUE, payload)
-    except Exception as e:
-        logging.warning(f"[send_authorization_message] RabbitMQ failed: {e}")
-
-    channel = await get_channel()
-    resp = await get_token(channel)
-
-    return resp
+    return await publish_rpc("authorization", payload)
 
 
 async def send_auth_message(token: str):

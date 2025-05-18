@@ -5,7 +5,6 @@ import json
 
 from internal.broker.rabbitclient.client import get_channel
 from internal.core.usecase.auth_core import AuthCore
-
 from internal.broker.rabbitclient.producers import send_authorization_response, send_validation_response
 
 AUTH_REQUEST_QUEUE = "auth_request"
@@ -38,8 +37,8 @@ async def check_authorization(channel: aio_pika.channel):
 
 
 # Отправить токены после авторизации
-async def give_token(channel: aio_pika.channel):
-    queue = await channel.declare_queue(AUTH_REQUEST_QUEUE, durable=True)
+async def consume_authorization(channel):
+    queue = await channel.declare_queue("authorization", durable=True)
 
     async with queue.iterator() as queue_iter:
         async for message in queue_iter:
@@ -48,10 +47,13 @@ async def give_token(channel: aio_pika.channel):
                 login = data["login"]
                 password = data["password"]
                 try:
-                    access, refresh = AuthCore.login(login, password)
-                    await send_authorization_response(access, refresh)
+                    result = AuthCore.login(login, password)
+                    await channel.default_exchange.publish(
+                        aio_pika.Message(
+                            body=json.dumps(result).encode(),
+                            correlation_id=message.correlation_id
+                        ),
+                        routing_key=message.reply_to
+                    )
                 except Exception as e:
                     logging.warning(f"Login failed for {login}: {e}")
-                    # можно сделать отправку ошибки через Rabbit, если нужно
-                # Здесь написать методы для получения токенов и засунуть их в метод ниже
-                await send_authorization_response()

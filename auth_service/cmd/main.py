@@ -13,6 +13,8 @@ from utils.db_init import DBInit
 from internal.broker.rabbitclient.workers import wrap_consumer
 from internal.broker.rabbitclient.workers import check_authorization, give_token
 
+from auth_service.internal.broker.rabbitclient.workers import consume_authorization
+
 
 async def main():
     # DBInit.create_database_if_not_exists()
@@ -54,7 +56,7 @@ async def main():
 
     await asyncio.gather(
         wrap_consumer(lambda ch: check_authorization(ch, auth_core), "check_authorization"),
-        wrap_consumer(lambda ch: give_token(ch, auth_core), "give_token"),
+        wrap_consumer(lambda ch: consume_authorization(ch, auth_core), "give_token"),
     )
 
     # # Здесь крутятся воркеры для приёма сообщений
