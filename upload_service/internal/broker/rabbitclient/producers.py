@@ -18,13 +18,14 @@ async def publish(routing_key: str, payload: dict):
     )
 
 
-async def send_image_id_message(image_id: str, status: str):
+async def send_image_id_message(image_id: str, status: str, image_url: str = ""):
     payload = {
         "image_id": image_id,
         "status": status,
+        "image_url": image_url,
     }
 
     try:
         await publish(IMAGE_ID_QUEUE, payload)
     except Exception as e:
-        logging.warning(f"[send_authorization_message] RabbitMQ failed: {e}")
+        logging.warning(f"[send_image_id_message] RabbitMQ failed: {e}")

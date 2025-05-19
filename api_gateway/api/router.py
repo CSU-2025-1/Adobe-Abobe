@@ -1,3 +1,5 @@
+import logging
+
 from fastapi import APIRouter, Query, HTTPException, UploadFile, File
 from internal.core.entity.auth.auth_dto import AuthRequest
 from internal.core.entity.upload.upload_dto import UploadRequest
@@ -34,34 +36,63 @@ async def login(data: AuthRequest):
 
 
 # Upload / Download
-@router.post("/upload")
-async def upload_file(token: str, file: UploadFile = File(...)):
-    auth_validate = await send_auth_message(token)
+# @router.post("/upload")
+# async def upload_file(token: str, file: UploadFile = File(...)):
+#     auth_validate = await send_auth_message(token)
+#
+#     if auth_validate["valid"]:
+#         try:
+#             file_data = await file.read()
+#
+#             image_data = UploadRequest(
+#                 content=file_data,
+#                 filename=file.filename,
+#                 content_type=file.content_type,
+#                 user_id=auth_validate["user_id"],
+#             )
+#
+#             response = await send_image_message(image_data)
+#
+#             if response["status"] == "success":
+#                 return {
+#                     "image_id": response["image_id"],
+#                 }
+#             else:
+#                 raise HTTPException(status_code=500, detail="File upload failed")
+#
+#         except Exception as e:
+#             raise HTTPException(status_code=500, detail=f"error: {str(e)}")
+#     else:
+#         raise HTTPException(status_code=401, detail="Invalid token")
 
-    if auth_validate["valid"]:
+@router.post("/upload")
+async def upload_file(file: UploadFile = File(...)):
+
         try:
             file_data = await file.read()
+            logging.info(f"file name: {file.filename}")
+            logging.info(f"file ct: {file.content_type}")
 
             image_data = UploadRequest(
                 content=file_data,
                 filename=file.filename,
                 content_type=file.content_type,
-                user_id=auth_validate["user_id"],
+                user_id="333",
             )
 
             response = await send_image_message(image_data)
+            logging.info(f"[gateway] got response from upload-service: {response}")
 
             if response["status"] == "success":
                 return {
                     "image_id": response["image_id"],
+                    "image_url": response["image_url"],
                 }
             else:
                 raise HTTPException(status_code=500, detail="File upload failed")
 
         except Exception as e:
             raise HTTPException(status_code=500, detail=f"error: {str(e)}")
-    else:
-        raise HTTPException(status_code=401, detail="Invalid token")
 
 
 @router.get("/download")

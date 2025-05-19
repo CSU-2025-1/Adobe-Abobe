@@ -45,7 +45,11 @@ async def get_token(channel: aio_pika.channel):
 
 async def get_uploaded_image_id(channel: aio_pika.channel):
     response = await wait_for_response(channel, IMAGE_ID_QUEUE)
-    return response
+    return {
+        "image_id": response.get("image_id"),
+        "status": response.get("status"),
+        "image_url": response.get("image_url")
+    }
 
 
 async def get_filtered_image(channel: aio_pika.channel):

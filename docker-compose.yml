@@ -28,19 +28,20 @@ services:
     ports:
       - "6379:6379"
 
-  postgres:
-    image: postgres:17
-    environment:
-      POSTGRES_DB: authservicedb
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: 123
-    ports:
-      - "5433:5432"
-    depends_on:
-      rabbit:
-        condition: service_healthy
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
+
+#  postgres:
+#    image: postgres:17
+#    environment:
+#      POSTGRES_DB: authservicedb
+#      POSTGRES_USER: postgres
+#      POSTGRES_PASSWORD: 123
+#    ports:
+#      - "5433:5432"
+#    depends_on:
+#      rabbit:
+#        condition: service_healthy
+#    volumes:
+#      - postgres_data:/var/lib/postgresql/data
 
   minio:
     image: quay.io/minio/minio
@@ -54,21 +55,21 @@ services:
     volumes:
       - minio-data:/data
 
-  auth-service:
-    build: ./auth_service
-    ports:
-      - "50001:50001"
-    env_file:
-      - ./auth_service/.env
-    depends_on:
-      rabbit:
-        condition: service_healthy
-      redis:
-        condition: service_started
-      minio:
-        condition: service_started
-      postgres:
-        condition: service_started
+#  auth-service:
+#    build: ./auth_service
+#    ports:
+#      - "50001:50001"
+#    env_file:
+#      - ./auth_service/.env
+#    depends_on:
+#      rabbit:
+#        condition: service_healthy
+#      redis:
+#        condition: service_started
+#      minio:
+#        condition: service_started
+#      postgres:
+#        condition: service_started
 
   upload-service:
     build: ./upload_service
@@ -84,17 +85,17 @@ services:
       minio:
         condition: service_started
 
-  filter-service:
-    build: ./filter_service
-    env_file:
-      - ./filter_service/.env
-    depends_on:
-      rabbit:
-        condition: service_healthy
-      redis:
-        condition: service_started
-      minio:
-        condition: service_started
+#  filter-service:
+#    build: ./filter_service
+#    env_file:
+#      - ./filter_service/.env
+#    depends_on:
+#      rabbit:
+#        condition: service_healthy
+#      redis:
+#        condition: service_started
+#      minio:
+#        condition: service_started
 
 volumes:
   postgres_data:

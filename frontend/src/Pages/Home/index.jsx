@@ -80,7 +80,35 @@ export default function PhotoUploadPage() {
               <Slider type="range" min="0" max="20" orient="horizontal" />
             </SliderGroup>
             <SliderGroup>
-              <SliderLabel>Блюр</SliderLabel>
+              <SliderLabel>Резкость</SliderLabel>
+              <Slider type="range" min="0" max="20" orient="horizontal" />
+            </SliderGroup>
+            <SliderGroup>
+              <SliderLabel>Насыщенность цвета</SliderLabel>
+              <Slider type="range" min="0" max="20" orient="horizontal" />
+            </SliderGroup>
+            <SliderGroup>
+              <SliderLabel>Размытие</SliderLabel>
+              <Slider type="range" min="0" max="20" orient="horizontal" />
+            </SliderGroup>
+            <SliderGroup>
+              <SliderLabel>Гамма-коррекция</SliderLabel>
+              <Slider type="range" min="0" max="20" orient="horizontal" />
+            </SliderGroup>
+            <SliderGroup>
+              <SliderLabel>Эффект сепии</SliderLabel>
+              <Slider type="range" min="0" max="20" orient="horizontal" />
+            </SliderGroup>
+            <SliderGroup>
+              <SliderLabel>Цветовая температура</SliderLabel>
+              <Slider type="range" min="0" max="20" orient="horizontal" />
+            </SliderGroup>
+            <SliderGroup>
+              <SliderLabel>Экспозиция</SliderLabel>
+              <Slider type="range" min="0" max="20" orient="horizontal" />
+            </SliderGroup>
+            <SliderGroup>
+              <SliderLabel>Смещение оттенка</SliderLabel>
               <Slider type="range" min="0" max="20" orient="horizontal" />
             </SliderGroup>
           </SlidersBlock>

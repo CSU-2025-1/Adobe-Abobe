@@ -1,12 +1,13 @@
 import asyncio
+import base64
 import logging
 import aio_pika
 import json
 
 from internal.broker.rabbitclient.client import get_channel
 from internal.broker.rabbitclient.producers import send_image_id_message
-from upload_service.internal.core.entity.image import Image
-from upload_service.internal.core.usecase.upload import handle_upload
+from internal.core.entity.image import Image
+from internal.core.usecase.upload import handle_upload
 
 UPLOAD_IMAGE_REQUEST_QUEUE = "upload_image"
 
@@ -27,24 +28,44 @@ async def consume_images_data(channel: aio_pika.channel):
 
     async with queue.iterator() as queue_iter:
         async for message in queue_iter:
-            async with message.process(ignore_processed=True):
+            async with message.process():
                 try:
                     data = json.loads(message.body.decode())
-                    file_data = data["file_data"]
+                    file_data = base64.b64decode(data["file_data"])
+
                     file_name = data["file_name"]
                     content_type = data["content_type"]
                     user_id = data["user_id"]
 
+                    logging.info(f"[upload] {file_name}")
+
                     image = Image(
+                        image_id="",
                         filename=file_name,
                         content=file_data,
                         content_type=content_type,
                         user_id=user_id
                     )
 
-                    image_id = await handle_upload(image)
+                    image_id, image_url = await handle_upload(image)
 
-                    await send_image_id_message(image_id=image_id, status="success")
+                    response_payload = {
+                        "image_id": image_id,
+                        "status": "success",
+                        "image_url": image_url,
+                    }
 
                 except Exception as e:
-                    await send_image_id_message(image_id=None, status=f"error: {str(e)}")
+                    response_payload = {
+                        "image_id": None,
+                        "status": f"error: {str(e)}",
+                        "image_url": "",
+                    }
+
+                await channel.default_exchange.publish(
+                    aio_pika.Message(
+                        body=json.dumps(response_payload).encode(),
+                        correlation_id=message.correlation_id
+                    ),
+                    routing_key=message.reply_to
+                )

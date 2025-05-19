@@ -11,7 +11,10 @@ from internal.broker.rabbitclient.workers import validate_token, get_token, get_
 app = FastAPI()
 
 app.include_router(router)
-
+logging.basicConfig(
+    level=logging.INFO,  # или INFO
+    format="%(asctime)s [%(levelname)s] %(message)s",
+)
 
 @app.get("/")
 async def root():
