@@ -17,7 +17,7 @@ UPLOAD_IMAGE_QUEUE = "upload"
 FILTER_QUEUE = "filter"
 
 
-async def publish_rpc(routing_key: str, payload: dict, timeout: float = 5.0):
+async def publish_rpc(routing_key: str, payload: dict, timeout: float = 30.0):
     channel = await get_channel()
     callback_queue = await channel.declare_queue(exclusive=True, auto_delete=True)
     correlation_id = str(uuid.uuid4())

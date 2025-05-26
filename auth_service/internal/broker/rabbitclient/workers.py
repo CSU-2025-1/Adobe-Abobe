@@ -77,7 +77,7 @@ async def consume_authorization(channel):
                 login = data["login"]
                 password = data["password"]
                 try:
-                    if(command == "login"):
+                    if command == "login":
                         access_token, refresh_token = auth_core.login(login, password)
                     else:
                         access_token, refresh_token = auth_core.register_user(login, password)

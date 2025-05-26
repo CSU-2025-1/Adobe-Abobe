@@ -29,6 +29,7 @@ async def wrap_consumer(consumer_fn, name: str):
 async def consume_filters(channel: aio_pika.channel):
     while True:
         try:
+            await channel.set_qos(prefetch_count=10)
             queue = await channel.declare_queue(FILTER_REQUEST_QUEUE, durable=True)
 
             async with queue.iterator() as queue_iter:
