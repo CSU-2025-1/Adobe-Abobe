@@ -36,22 +36,33 @@ export default function PhotoUploadPage() {
   });
 
   const handleUpload = async (e) => {
-    const selectedFile = e.target.files[0];
-    if (!selectedFile) return;
+  const selectedFile = e.target.files[0];
+  if (!selectedFile) return;
 
-    const formData = new FormData();
-    formData.append('file', selectedFile);
+  const formData = new FormData();
+  formData.append('file', selectedFile);
 
-    try {
-      const response = await axios.post('http://localhost:8000/upload', formData);
-      setImageId(response.data.image_id);
+  try {
+    const response = await axios.post('http://localhost:8000/upload', formData);
+
+    console.log('Ответ сервера:', response.data);
+
+    setImageId(response.data.image_id);
+
+    if (response.data.image_url) {
+      setPreviewUrl(response.data.image_url);
+      console.log(response.data.image_url);
+    } else {
       setPreviewUrl(URL.createObjectURL(selectedFile));
-      console.log('Изображение успешно загружено');
-    } catch (error) {
-      console.error('Ошибка при загрузке:', error);
-      alert('Ошибка при загрузке изображения');
     }
-  };
+
+    console.log('Изображение успешно загружено');
+  } catch (error) {
+    console.error('Ошибка при загрузке:', error);
+    alert('Ошибка при загрузке изображения');
+  }
+};
+
 
   const handleFilterChange = (type, value) => {
     setFilters((prev) => ({ ...prev, [type]: value }));
@@ -122,6 +133,7 @@ export default function PhotoUploadPage() {
           <ImageWrapper>
             {previewUrl ? (
               <PreviewImage src={previewUrl} alt="Preview" style={{ filter: getCssFilterString() }} />
+
             ) : (
               <Placeholder>Изображение не загружено</Placeholder>
             )}

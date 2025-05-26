@@ -85,17 +85,17 @@ services:
       minio:
         condition: service_started
 
-#  filter-service:
-#    build: ./filter_service
-#    env_file:
-#      - ./filter_service/.env
-#    depends_on:
-#      rabbit:
-#        condition: service_healthy
-#      redis:
-#        condition: service_started
-#      minio:
-#        condition: service_started
+  filter-service:
+    build: ./filter_service
+    env_file:
+      - ./filter_service/.env
+    depends_on:
+      rabbit:
+        condition: service_healthy
+      redis:
+        condition: service_started
+      minio:
+        condition: service_started
 
   frontend:
     build: ./frontend
