@@ -13,27 +13,33 @@ from internal.core.entity.upload.upload_dto import UploadRequest
 from tenacity import retry, stop_after_attempt, wait_fixed
 from internal.core.entity.filter.filter_dto import FilterRequest
 
-AUTH_REQUEST_QUEUE = "auth_request"
+VALIDATION_QUEUE = "validation"
 AUTHORIZATION_QUEUE = "authorization"
-UPLOAD_IMAGE_REQUEST_QUEUE = "upload_image"
-FILTER_REQUEST_QUEUE = "filter"
+UPLOAD_IMAGE_QUEUE = "upload"
+FILTER_QUEUE = "filter"
 
 
 async def publish_rpc(routing_key: str, payload: dict, timeout: float = 5.0):
     channel = await get_channel()
-
     callback_queue = await channel.declare_queue(exclusive=True, auto_delete=True)
     correlation_id = str(uuid.uuid4())
 
     future = asyncio.get_event_loop().create_future()
 
     async def on_response(message: aio_pika.IncomingMessage):
+        logging.info(f"📨 Received response on callback_queue: correlation_id={message.correlation_id}")
         if message.correlation_id == correlation_id:
-            future.set_result(json.loads(message.body.decode()))
+            try:
+                decoded = json.loads(message.body.decode())
+                future.set_result(decoded)
+                logging.info(f"✅ Matched response: {decoded}")
+            except Exception as e:
+                logging.error(f"❌ Failed to decode response: {e}")
             await message.ack()
 
     await callback_queue.consume(on_response)
 
+    logging.info(f"📤 Publishing to {routing_key}, waiting reply on {callback_queue.name}")
     await channel.default_exchange.publish(
         aio_pika.Message(
             body=json.dumps(payload).encode(),
@@ -52,67 +58,32 @@ async def publish_rpc(routing_key: str, payload: dict, timeout: float = 5.0):
 async def send_authorization_message(auth_request: AuthRequest):
     payload = {
         "login": auth_request.login,
-        "password": auth_request.password,
+        "password": auth_request.password
     }
-    return await publish_rpc("authorization", payload)
+    return await publish_rpc(AUTHORIZATION_QUEUE, payload)
 
 
-async def send_auth_message(token: str):
-    payload = {
-        "token": token,
-    }
+async def send_validate_message(token: str):
+    payload = {"token": token}
 
     try:
-        await publish(AUTH_REQUEST_QUEUE, payload)
+        return await publish_rpc(VALIDATION_QUEUE, payload)
     except Exception as e:
         logging.warning(f"[send_auth_message] RabbitMQ failed: {e}")
 
-    channel = await get_channel()
-    resp = await validate_token(channel)
 
-    return resp
-
-
-async def send_image_message(upload_request: UploadRequest):
-    correlation_id = str(uuid.uuid4())
-    connection = await aio_pika.connect_robust("amqp://guest:guest@rabbit/")
-    channel = await connection.channel()
-
-    callback_queue = await channel.declare_queue(exclusive=True)
-
-    future = asyncio.get_event_loop().create_future()
-
-    async def on_response(mes: aio_pika.IncomingMessage):
-        if mes.correlation_id == correlation_id:
-            body = json.loads(mes.body.decode())
-            future.set_result(body)
-
-    await callback_queue.consume(on_response)
-
+async def send_upload_message(upload_request: UploadRequest):
     payload = {
         "file_data": base64.b64encode(upload_request.content).decode(),
         "file_name": upload_request.filename,
         "content_type": upload_request.content_type,
-        "user_id": upload_request.user_id,
+        "user_id": upload_request.user_id
     }
 
-    mes = aio_pika.Message(
-        body=json.dumps(payload).encode(),
-        reply_to=callback_queue.name,
-        correlation_id=correlation_id,
-        delivery_mode=aio_pika.DeliveryMode.PERSISTENT
-    )
-
-    await channel.default_exchange.publish(
-        mes, routing_key=UPLOAD_IMAGE_REQUEST_QUEUE
-    )
-
     try:
-        response = await asyncio.wait_for(future, timeout=10)
-    except asyncio.TimeoutError:
-        raise Exception("RPC timeout")
-
-    return response
+        return await publish_rpc(UPLOAD_IMAGE_QUEUE, payload)
+    except Exception as e:
+        logging.warning(f"[send_image_message] RabbitMQ failed: {e}")
 
 
 async def send_filters_message(filter_request: FilterRequest):
@@ -125,11 +96,6 @@ async def send_filters_message(filter_request: FilterRequest):
     }
 
     try:
-        await publish(FILTER_REQUEST_QUEUE, payload)
+        return await publish_rpc(FILTER_QUEUE, payload)
     except Exception as e:
-        logging.warning(f"[send_filters_message] RabbitMQ failed: {e}")
-
-    channel = await get_channel()
-    resp = await get_filtered_image(channel)
-
-    return resp
+        logging.info(f"[send_filters_message] RabbitMQ failed: {e}")

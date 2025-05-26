@@ -38,7 +38,6 @@ async def consume_filters(channel: aio_pika.channel):
                         print("📩 Received raw message:", data)
                         image_id = data["image_id"]
                         filter_obj = data["filter"]
-
                         redis_repo = RedisRepo()
                         s3_repo = S3Repo()
 
@@ -49,8 +48,18 @@ async def consume_filters(channel: aio_pika.channel):
                                 redis_repo=redis_repo,
                                 s3_repo=s3_repo
                             )
+                            logging.debug(f"✅ Filtered URL sent to filtered_image: {filtered_url}")
+                            logging.info(f"✅ Filtered URL sent to filtered_image: {filtered_url}")
+                            print(f"✅ Filtered URL sent to filtered_image: {filtered_url}")
 
-                            await send_filtered_image_message(filtered_url)
+                            logging.info(f"➡ reply_to: {message.reply_to}")
+                            await channel.default_exchange.publish(
+                                aio_pika.Message(
+                                    body=json.dumps({"filtered_url": filtered_url}).encode(),
+                                    correlation_id=message.correlation_id
+                                ),
+                                routing_key=message.reply_to
+                            )
 
                         except Exception as e:
                             logging.warning(f"[filter_worker] Failed to process filter: {e}")

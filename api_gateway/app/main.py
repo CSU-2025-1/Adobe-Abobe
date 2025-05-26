@@ -1,12 +1,14 @@
-import asyncio
 import logging
+
 import uvicorn
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi import FastAPI
 from api.router import router
-from internal.broker.rabbitclient.workers import wrap_consumer
-from internal.broker.rabbitclient.workers import validate_token, get_token, get_uploaded_image_id, \
-    get_filtered_image
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(message)s",
+)
 
 app = FastAPI()
 
@@ -18,11 +20,6 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-app.include_router(router)
-logging.basicConfig(
-    level=logging.INFO,  # или INFO
-    format="%(asctime)s [%(levelname)s] %(message)s",
-)
 
 @app.get("/")
 async def root():
@@ -32,17 +29,6 @@ async def root():
 @app.get("/hello/{name}")
 async def say_hello(name: str):
     return {"message": f"Hello {name}"}
-
-
-@app.on_event("startup")
-async def startup_event():
-    tasks = [
-        asyncio.create_task(wrap_consumer(validate_token, "validate_token")),
-        asyncio.create_task(wrap_consumer(get_token, "get_token")),
-        asyncio.create_task(wrap_consumer(get_uploaded_image_id, "get_uploaded_image_id")),
-        asyncio.create_task(wrap_consumer(get_filtered_image, "get_filtered_image")),
-    ]
-    logging.info("[gateway] Auth worker started as background task")
 
 
 if __name__ == "__main__":

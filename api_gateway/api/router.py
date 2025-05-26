@@ -3,9 +3,9 @@ import logging
 from fastapi import APIRouter, Query, HTTPException, UploadFile, File
 from internal.core.entity.auth.auth_dto import AuthRequest
 from internal.core.entity.upload.upload_dto import UploadRequest
-from internal.broker.rabbitclient.producers import send_auth_message, send_authorization_message, send_image_message
 from internal.core.entity.filter.filter_dto import FilterRequest
-from internal.broker.rabbitclient.producers import send_filters_message
+from internal.broker.rabbitclient.producers import send_authorization_message, send_validate_message, \
+    send_filters_message, send_upload_message
 from fastapi.responses import RedirectResponse
 
 router = APIRouter()
@@ -81,7 +81,7 @@ async def upload_file(file: UploadFile = File(...)):
                 user_id="333",
             )
 
-            response = await send_image_message(image_data)
+            response = await send_upload_message(image_data)
             logging.info(f"[gateway] got response from upload-service: {response}")
 
             if response["status"] == "success":
@@ -96,10 +96,9 @@ async def upload_file(file: UploadFile = File(...)):
             raise HTTPException(status_code=500, detail=f"error: {str(e)}")
 
 
-
 @router.get("/download")
 async def download_file(token: str, image_id: int):
-    auth_validate = await send_auth_message(token)
+    auth_validate = await send_validate_message(token)
 
     if auth_validate["valid"]:
         pass
@@ -120,7 +119,7 @@ async def apply_filter(data: FilterRequest):
 """
 @router.post("/editphoto/filter/")
 async def apply_filter(token: str, data: FilterRequest):
-    auth_validate = await send_auth_message(token)
+    auth_validate = await send_validate_message(token)
 
     if auth_validate["valid"]:
         try:
@@ -133,6 +132,7 @@ async def apply_filter(token: str, data: FilterRequest):
     else:
         raise HTTPException(status_code=401, detail="Invalid token")
 """
+
 
 # VCS
 @router.get("/vcs/forward")

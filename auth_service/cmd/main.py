@@ -56,7 +56,7 @@ async def main():
 
     await asyncio.gather(
         wrap_consumer(lambda ch: check_authorization(ch, auth_core), "check_authorization"),
-        wrap_consumer(lambda ch: consume_authorization(ch, auth_core), "give_token"),
+        wrap_consumer(consume_authorization, "give_token"),
     )
 
     # # Здесь крутятся воркеры для приёма сообщений

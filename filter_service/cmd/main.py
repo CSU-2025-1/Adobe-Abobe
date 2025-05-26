@@ -4,7 +4,7 @@ import logging
 from internal.broker.rabbitclient.workers import wrap_consumer, consume_filters
 
 logging.basicConfig(
-    level=logging.DEBUG,  # или INFO
+    level=logging.INFO,  # или INFO
     format="%(asctime)s [%(levelname)s] %(message)s",
 )
 

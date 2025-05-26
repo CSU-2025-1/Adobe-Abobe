@@ -9,7 +9,8 @@ from internal.broker.rabbitclient.producers import send_image_id_message
 from internal.core.entity.image import Image
 from internal.core.usecase.upload import handle_upload
 
-UPLOAD_IMAGE_REQUEST_QUEUE = "upload_image"
+UPLOAD_IMAGE_REQUEST_QUEUE = "upload"
+
 
 async def wrap_consumer(consumer_fn, name):
     while True:
@@ -54,18 +55,13 @@ async def consume_images_data(channel: aio_pika.channel):
                         "status": "success",
                         "image_url": image_url,
                     }
+                    await channel.default_exchange.publish(
+                        aio_pika.Message(
+                            body=json.dumps(response_payload).encode(),
+                            correlation_id=message.correlation_id
+                        ),
+                        routing_key=message.reply_to
+                    )
 
                 except Exception as e:
-                    response_payload = {
-                        "image_id": None,
-                        "status": f"error: {str(e)}",
-                        "image_url": "",
-                    }
-
-                await channel.default_exchange.publish(
-                    aio_pika.Message(
-                        body=json.dumps(response_payload).encode(),
-                        correlation_id=message.correlation_id
-                    ),
-                    routing_key=message.reply_to
-                )
+                    logging.warning(f"[upload_worker] Failed to process upload: {e}")

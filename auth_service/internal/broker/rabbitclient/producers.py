@@ -3,13 +3,11 @@ import logging
 import aio_pika
 
 from internal.broker.rabbitclient.client import get_channel
-from tenacity import retry, stop_after_attempt, wait_fixed
 
 AUTH_RESPONSE_QUEUE = "auth_response"
 VALIDATION_TOKEN_QUEUE = "token"
 
 
-@retry(stop=stop_after_attempt(3), wait=wait_fixed(5))
 async def publish(routing_key: str, payload: dict):
     channel = await get_channel()
     message = json.dumps(payload).encode()

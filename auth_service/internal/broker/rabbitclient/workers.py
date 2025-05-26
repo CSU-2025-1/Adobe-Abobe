@@ -47,10 +47,10 @@ async def consume_authorization(channel):
                 login = data["login"]
                 password = data["password"]
                 try:
-                    result = AuthCore.login(login, password)
+                    access_token, refresh_token = AuthCore.login(login, password)
                     await channel.default_exchange.publish(
                         aio_pika.Message(
-                            body=json.dumps(result).encode(),
+                            body=json.dumps({"access_token": access_token, "refresh_token": refresh_token}).encode(),
                             correlation_id=message.correlation_id
                         ),
                         routing_key=message.reply_to
