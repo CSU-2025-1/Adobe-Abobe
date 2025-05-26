@@ -1,12 +1,11 @@
 import logging
 
-from fastapi import APIRouter, Query, HTTPException, UploadFile, File
+from fastapi import APIRouter, Query, HTTPException, UploadFile, File, Header
 from internal.core.entity.auth.auth_dto import AuthRequest
 from internal.core.entity.upload.upload_dto import UploadRequest
 from internal.core.entity.filter.filter_dto import FilterRequest
 from internal.broker.rabbitclient.producers import send_authorization_message, send_validate_message, \
     send_filters_message, send_upload_message
-from fastapi.responses import RedirectResponse
 
 router = APIRouter()
 
@@ -15,7 +14,8 @@ router = APIRouter()
 @router.post("/auth/register")
 async def register(data: AuthRequest):
     try:
-        response = await send_authorization_message(data)
+        command = "register"
+        response = await send_authorization_message(data, command)
         return {
             "access_token": response["access_token"],
             "refresh_token": response["refresh_token"],
@@ -27,7 +27,8 @@ async def register(data: AuthRequest):
 @router.post("/auth/login")
 async def login(data: AuthRequest):
     try:
-        response = await send_authorization_message(data)
+        command = "login"
+        response = await send_authorization_message(data, command)
         return {
             "access_token": response["access_token"],
             "refresh_token": response["refresh_token"],
@@ -37,38 +38,14 @@ async def login(data: AuthRequest):
 
 
 # Upload / Download
-# @router.post("/upload")
-# async def upload_file(token: str, file: UploadFile = File(...)):
-#     auth_validate = await send_auth_message(token)
-#
-#     if auth_validate["valid"]:
-#         try:
-#             file_data = await file.read()
-#
-#             image_data = UploadRequest(
-#                 content=file_data,
-#                 filename=file.filename,
-#                 content_type=file.content_type,
-#                 user_id=auth_validate["user_id"],
-#             )
-#
-#             response = await send_image_message(image_data)
-#
-#             if response["status"] == "success":
-#                 return {
-#                     "image_id": response["image_id"],
-#                 }
-#             else:
-#                 raise HTTPException(status_code=500, detail="File upload failed")
-#
-#         except Exception as e:
-#             raise HTTPException(status_code=500, detail=f"error: {str(e)}")
-#     else:
-#         raise HTTPException(status_code=401, detail="Invalid token")
-
 @router.post("/upload")
-async def upload_file(file: UploadFile = File(...)):
+async def upload_file(file: UploadFile = File(...), authorization: str = Header(...)):
 
+    token = authorization.replace("Bearer ", "") if authorization.startswith("Bearer ") else authorization
+
+    auth_validate = await send_validate_message(token)
+
+    if auth_validate["valid"]:
         try:
             file_data = await file.read()
             logging.info(f"file name: {file.filename}")
@@ -78,7 +55,7 @@ async def upload_file(file: UploadFile = File(...)):
                 content=file_data,
                 filename=file.filename,
                 content_type=file.content_type,
-                user_id="333",
+                user_id=auth_validate["user_id"],
             )
 
             response = await send_upload_message(image_data)
@@ -94,6 +71,8 @@ async def upload_file(file: UploadFile = File(...)):
 
         except Exception as e:
             raise HTTPException(status_code=500, detail=f"error: {str(e)}")
+    else:
+        raise HTTPException(status_code=401, detail="Invalid token")
 
 
 @router.get("/download")

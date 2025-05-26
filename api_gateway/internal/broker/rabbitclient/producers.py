@@ -53,10 +53,11 @@ async def publish_rpc(routing_key: str, payload: dict, timeout: float = 5.0):
         raise Exception("RPC timeout")
 
 
-async def send_authorization_message(auth_request: AuthRequest):
+async def send_authorization_message(auth_request: AuthRequest, command: str):
     payload = {
         "login": auth_request.login,
-        "password": auth_request.password
+        "password": auth_request.password,
+        "command": command
     }
     return await publish_rpc(AUTHORIZATION_QUEUE, payload)
 

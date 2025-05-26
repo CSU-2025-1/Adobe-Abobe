@@ -10,10 +10,8 @@ from internal.repository.redis_repo import RedisRepo
 from internal.delivery.grpc.auth_handler import AuthService
 from api.auth import auth_pb2_grpc
 from utils.db_init import DBInit
-from internal.broker.rabbitclient.workers import wrap_consumer
-from internal.broker.rabbitclient.workers import check_authorization, give_token
+from internal.broker.rabbitclient.workers import wrap_consumer, consume_token_refresh, consume_authorization, check_authorization
 
-from auth_service.internal.broker.rabbitclient.workers import consume_authorization
 
 
 async def main():
@@ -38,32 +36,29 @@ async def main():
     #     wrap_consumer(lambda ch: give_token(ch, auth_core), "give_token"),
     # )
 
-    dbname = config.db_name
-    user = config.db_user
-    password = config.db_password
-    host = config.db_host
+
 
     # создание бд
     DBInit.create_database_if_not_exists()
 
-    # подключение к бд
-    conn = psycopg2.connect(dbname=dbname, user=user, password=password, host=host)
-    pg_repo = PostgresRepo(conn)
-    pg_repo.init_schema()
-    redis_repo = RedisRepo()
-
-    auth_core = AuthCore(pg_repo, redis_repo)
+    # dbname = config.db_name
+    # user = config.db_user
+    # password = config.db_password
+    # host = config.db_host
+    # # подключение к бд
+    # conn = psycopg2.connect(dbname=dbname, user=user, password=password, host=host)
+    # pg_repo = PostgresRepo(conn)
+    # pg_repo.init_schema()
+    # redis_repo = RedisRepo()
+    #
+    # auth_core = AuthCore(pg_repo, redis_repo)
 
     await asyncio.gather(
-        wrap_consumer(lambda ch: check_authorization(ch, auth_core), "check_authorization"),
-        wrap_consumer(consume_authorization, "give_token"),
+        wrap_consumer(check_authorization, "check_authorization"),
+        wrap_consumer(consume_authorization, "authorization"),
+        # wrap_consumer(consume_token_refresh, "refresh_token")
     )
 
-    # # Здесь крутятся воркеры для приёма сообщений
-    # await asyncio.gather(
-    #     wrap_consumer(check_authorization, "check_authorization"),
-    #     wrap_consumer(give_token, "give_token"),
-    # )
 
     # server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))
     # auth_pb2_grpc.add_AuthServiceServicer_to_server(AuthService(pg_repo, redis_repo), server)
