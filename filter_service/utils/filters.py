@@ -1,99 +1,79 @@
-from PIL import Image, ImageEnhance, ImageFilter
-import os
+import cv2
 import numpy as np
-
 from utils.filters_registry import register_filter
-from utils.filters_registry import FILTER_REGISTRY
-
-
-def _apply_filter(image_path: str, filter_config: dict) -> str:
-    image = Image.open(image_path).convert("RGB")
-    filter_type = filter_config.get("type")
-    value = filter_config.get("value")
-
-    if filter_type not in FILTER_REGISTRY:
-        raise ValueError(f"Unsupported filter type: {filter_type}")
-
-    filtered_image = FILTER_REGISTRY[filter_type](image, value)
-
-    base, ext = os.path.splitext(image_path)
-    output_path = f"{base}_{filter_type}_{str(value).replace('.', '_')}.jpg"
-    filtered_image.save(output_path, format="JPEG")
-    return output_path
 
 
 @register_filter("brightness")
-def apply_brightness(image, value):
-    return ImageEnhance.Brightness(image).enhance(value)
+def apply_brightness(image: np.ndarray, value: float) -> np.ndarray:
+    return cv2.convertScaleAbs(image, alpha=value, beta=0)
 
 
 @register_filter("contrast")
-def apply_contrast(image, value):
-    return ImageEnhance.Contrast(image).enhance(value)
-
-
-@register_filter("sharpness")
-def apply_sharpness(image, value):
-    return ImageEnhance.Sharpness(image).enhance(value)
-
-
-@register_filter("color")
-def apply_color(image, value):
-    return ImageEnhance.Color(image).enhance(value)
+def apply_contrast(image: np.ndarray, value: float) -> np.ndarray:
+    lab = cv2.cvtColor(image, cv2.COLOR_RGB2LAB)
+    l, a, b = cv2.split(lab)
+    l = cv2.addWeighted(l, value, 0, 0, 0)
+    lab = cv2.merge((l, a, b))
+    return cv2.cvtColor(lab, cv2.COLOR_LAB2RGB)
 
 
 @register_filter("blur")
-def apply_blur(image, value):
-    if value > 0:
-        return image.filter(ImageFilter.GaussianBlur(radius=value))
-    return image
+def apply_blur(image: np.ndarray, value: float) -> np.ndarray:
+    ksize = int(2 * round(value) + 1)
+    return cv2.GaussianBlur(image, (ksize, ksize), 0)
+
+
+@register_filter("sharpness")
+def apply_sharpness(image: np.ndarray, value: float) -> np.ndarray:
+    kernel = np.array([
+        [0, -1, 0],
+        [-1, 5 + value, -1],
+        [0, -1, 0]
+    ])
+    return cv2.filter2D(image, -1, kernel)
+
+
+@register_filter("color")
+def apply_color(image: np.ndarray, value: float) -> np.ndarray:
+    hsv = cv2.cvtColor(image, cv2.COLOR_RGB2HSV).astype(np.float32)
+    hsv[..., 1] *= value
+    hsv[..., 1] = np.clip(hsv[..., 1], 0, 255)
+    return cv2.cvtColor(hsv.astype(np.uint8), cv2.COLOR_HSV2RGB)
 
 
 @register_filter("gamma")
-def apply_gamma(image, value):
+def apply_gamma(image: np.ndarray, value: float) -> np.ndarray:
     inv_gamma = 1.0 / value
-    table = [min(255, int((i / 255.0) ** inv_gamma * 255)) for i in range(256)]
-    return image.point(table * 3)
+    table = np.array([(i / 255.0) ** inv_gamma * 255 for i in np.arange(256)]).astype("uint8")
+    return cv2.LUT(image, table)
 
 
 @register_filter("sepia")
-def apply_sepia(image, value):
-    img = np.array(image).astype(np.float32)
-    r, g, b = img[..., 0], img[..., 1], img[..., 2]
-    sepia = np.stack([
-        r * 0.393 + g * 0.769 + b * 0.189,
-        r * 0.349 + g * 0.686 + b * 0.168,
-        r * 0.272 + g * 0.534 + b * 0.131
-    ], axis=-1)
-    result = (sepia * value + img * (1 - value))
-    return Image.fromarray(np.clip(result, 0, 255).astype(np.uint8))
+def apply_sepia(image: np.ndarray, value: float) -> np.ndarray:
+    sepia_kernel = np.array([[0.393, 0.769, 0.189],
+                             [0.349, 0.686, 0.168],
+                             [0.272, 0.534, 0.131]])
+    sepia_img = image @ sepia_kernel.T
+    sepia_img = np.clip(sepia_img, 0, 255).astype(np.uint8)
+    return cv2.addWeighted(image, 1 - value, sepia_img, value, 0)
 
 
 @register_filter("temperature")
-def apply_temperature(image, value):
-    r_adj = int((value - 6500) / 1000 * 20)
-    b_adj = -r_adj
-    r, g, b = image.split()
-    r = r.point(lambda i: min(255, max(0, i + r_adj)))
-    b = b.point(lambda i: min(255, max(0, i + b_adj)))
-    return Image.merge("RGB", (r, g, b))
+def apply_temperature(image: np.ndarray, value: float) -> np.ndarray:
+    b, g, r = cv2.split(image.astype(np.float32))
+    r += (value - 6500) / 100
+    b -= (value - 6500) / 100
+    merged = cv2.merge([np.clip(b, 0, 255), g, np.clip(r, 0, 255)])
+    return merged.astype(np.uint8)
 
 
 @register_filter("exposure")
-def apply_exposure(image, value):
-    factor = 1 + value
-    image = ImageEnhance.Brightness(image).enhance(factor)
-    image = ImageEnhance.Contrast(image).enhance(factor)
-    return image
+def apply_exposure(image: np.ndarray, value: float) -> np.ndarray:
+    return cv2.convertScaleAbs(image, alpha=1 + value, beta=0)
 
 
 @register_filter("hue")
-def apply_hue(image, value):
-    import colorsys
-    img = np.array(image).astype(np.float32) / 255.0
-    r, g, b = img[..., 0], img[..., 1], img[..., 2]
-    hls = np.vectorize(colorsys.rgb_to_hls)(r, g, b)
-    h = (hls[0] + value / 360.0) % 1.0
-    rgb = np.vectorize(colorsys.hls_to_rgb)(h, hls[1], hls[2])
-    result = np.stack(rgb, axis=-1)
-    return Image.fromarray((np.clip(result, 0, 1) * 255).astype(np.uint8))
+def apply_hue(image: np.ndarray, value: float) -> np.ndarray:
+    hsv = cv2.cvtColor(image, cv2.COLOR_RGB2HSV).astype(np.float32)
+    hsv[..., 0] = (hsv[..., 0] + (value / 2)) % 180
+    return cv2.cvtColor(hsv.astype(np.uint8), cv2.COLOR_HSV2RGB)

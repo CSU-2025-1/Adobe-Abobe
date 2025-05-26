@@ -1,6 +1,7 @@
 import aiohttp
 import uuid
 import os
+import asyncio
 
 TEMP_DIR = "/tmp" if os.name != "nt" else os.getenv("TEMP", ".")
 
@@ -13,7 +14,9 @@ async def download_image(url: str) -> str:
         async with session.get(url) as resp:
             if resp.status != 200:
                 raise ValueError(f"Failed to download image: {resp.status}")
+
             with open(file_path, "wb") as f:
-                f.write(await resp.read())
+                async for chunk in resp.content.iter_chunked(65536):
+                    f.write(chunk)
 
     return file_path

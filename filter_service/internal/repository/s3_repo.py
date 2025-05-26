@@ -1,12 +1,8 @@
 import asyncio
-import logging
-import time
 from io import BytesIO
 
 import boto3
-from botocore.exceptions import BotoCoreError
 import os
-import uuid
 from config.config import config
 
 

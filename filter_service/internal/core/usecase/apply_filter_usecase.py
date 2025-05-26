@@ -1,12 +1,12 @@
 import gc
 import os
-import time
 import uuid
 import logging
 from datetime import datetime
 from PIL import Image
 from io import BytesIO
-import asyncio
+import cv2
+import numpy as np
 
 from internal.repository.s3_repo import S3Repo
 from internal.repository.redis_repo import RedisRepo
@@ -26,17 +26,19 @@ async def apply_filter_usecase(
 
     try:
         image = Image.open(image_path).convert("RGB")
+        image = np.array(image)
 
         for f in filters:
             filter_type = f["type"]
             value = f["value"]
+            logging.info(f"[apply] {filter_type}={value}")
             if filter_type not in FILTER_REGISTRY:
                 raise ValueError(f"Unsupported filter: {filter_type}")
             image = FILTER_REGISTRY[filter_type](image, value)
 
         gc.collect()
-        buffer = BytesIO()
-        image.save(buffer, format="JPEG", quality=80, optimize=False)
+        _, encoded_image = cv2.imencode('.jpg', cv2.cvtColor(image, cv2.COLOR_RGB2BGR))
+        buffer = BytesIO(encoded_image.tobytes())
         buffer.seek(0)
 
         final_filename = f"filtered_{uuid.uuid4().hex}.jpg"
@@ -50,20 +52,10 @@ async def apply_filter_usecase(
 
     finally:
         try:
-
             if original_file and os.path.exists(original_file):
                 os.remove(original_file)
-
             if final_path and os.path.exists(final_path):
                 os.remove(final_path)
-
         except Exception as e:
-
             logging.warning(f"[cleanup] Failed to remove temp files: {e}")
-
-
-def save_image_to_buffer(image: Image.Image) -> BytesIO:
-    buffer = BytesIO()
-    image.save(buffer, format="JPEG", quality=80, optimize=False)
-    buffer.seek(0)
-    return buffer
+        gc.collect()
