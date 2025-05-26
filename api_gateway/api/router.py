@@ -15,7 +15,8 @@ router = APIRouter()
 @router.post("/auth/register")
 async def register(data: AuthRequest):
     try:
-        response = await send_authorization_message(data)
+        command = "register"
+        response = await send_authorization_message(data, command)
         return {
             "access_token": response["access_token"],
             "refresh_token": response["refresh_token"],
@@ -27,7 +28,8 @@ async def register(data: AuthRequest):
 @router.post("/auth/login")
 async def login(data: AuthRequest):
     try:
-        response = await send_authorization_message(data)
+        command = "login"
+        response = await send_authorization_message(data, command)
         return {
             "access_token": response["access_token"],
             "refresh_token": response["refresh_token"],
