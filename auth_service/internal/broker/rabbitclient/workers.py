@@ -27,6 +27,7 @@ redis_repo = RedisRepo()
 
 auth_core = AuthCore(pg_repo, redis_repo)
 
+
 async def wrap_consumer(consumer_fn, name):
     while True:
         try:
@@ -48,8 +49,21 @@ async def check_authorization(channel: aio_pika.channel):
             async with message.process(ignore_processed=True):
                 data = json.loads(message.body.decode())
                 token = data["token"]
-                valid, user_id = AuthCore.validate_token(token) # Методы, которые проверяют токен. В метод ниже вставить valid и user_id
-                await send_validation_response(valid, user_id)
+                valid, user_id = auth_core.validate_token(token)
+                try:
+                    await channel.default_exchange.publish(
+                        aio_pika.Message(
+                            body=json.dumps({
+                                "valid": valid,
+                                "user_id": user_id
+                            }).encode(),
+                            correlation_id=message.correlation_id
+                        ),
+                        routing_key=message.reply_to
+                    )
+                except Exception as e:
+                    logging.warning(f"Login failed: {e}")
+
 
 # Отправить токены после авторизации
 async def consume_authorization(channel):
@@ -64,9 +78,9 @@ async def consume_authorization(channel):
                 password = data["password"]
                 try:
                     if(command == "login"):
-                        access_token, refresh_token = AuthCore.login(login, password)
+                        access_token, refresh_token = auth_core.login(login, password)
                     else:
-                        access_token, refresh_token = AuthCore.register_user(login, password)
+                        access_token, refresh_token = auth_core.register_user(login, password)
 
                     await channel.default_exchange.publish(
                         aio_pika.Message(
@@ -80,6 +94,7 @@ async def consume_authorization(channel):
                     )
                 except Exception as e:
                     logging.warning(f"Login failed for {login}: {e}")
+
 
 async def consume_token_refresh(channel):
     queue = await channel.declare_queue("refresh_token", durable=True)
