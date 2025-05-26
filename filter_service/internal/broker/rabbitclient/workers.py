@@ -1,5 +1,7 @@
 import asyncio
 import logging
+import time
+
 import aio_pika
 import json
 
@@ -39,12 +41,15 @@ async def consume_filters(channel: aio_pika.channel):
                         s3_repo = S3Repo()
 
                         try:
+                            start = time.perf_counter()
                             filtered_url, timestamp = await apply_filter_usecase(
                                 user_id=user_id,
                                 image_url=image_url,
                                 filters=filters,
                                 s3_repo=s3_repo
                             )
+                            duration = time.perf_counter() - start
+                            logging.info(f"[timing] Filter applied in {duration:.2f} seconds")
 
                             logging.info(f"➡ reply_to: {message.reply_to}")
                             await channel.default_exchange.publish(

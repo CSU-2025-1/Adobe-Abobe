@@ -28,7 +28,6 @@ async def send_filtered_image_message(filtered_url: str, timestamp: str, filters
         "timestamp": timestamp,
         "filters": filters,
     }
-
     try:
         await publish(FILTERED_IMAGE_QUEUE, payload)
     except Exception as e:

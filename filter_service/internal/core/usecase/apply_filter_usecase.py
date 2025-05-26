@@ -1,37 +1,69 @@
+import gc
 import os
+import time
 import uuid
-import asyncio
 import logging
 from datetime import datetime
+from PIL import Image
+from io import BytesIO
+import asyncio
 
 from internal.repository.s3_repo import S3Repo
-from utils.filters import _apply_filter
-from utils.image_loader import download_image
 from internal.repository.redis_repo import RedisRepo
-from utils import filters
+from utils.filters_registry import FILTER_REGISTRY
+from utils.image_loader import download_image
 
 
 async def apply_filter_usecase(
-    user_id: str,
-    image_url: str,
-    filters: list[dict],
-    s3_repo: S3Repo
+        user_id: str,
+        image_url: str,
+        filters: list[dict],
+        s3_repo: S3Repo
 ) -> tuple[str, str]:
     image_path = await download_image(image_url)
-    current_path = image_path
+    original_file = image_path
+    final_path = None
 
-    for f in filters:
-        loop = asyncio.get_running_loop()
-        current_path = await loop.run_in_executor(None, _apply_filter, current_path, f)
+    try:
+        image = Image.open(image_path).convert("RGB")
 
-    output_path = os.path.splitext(current_path)[0] + f"_final_{uuid.uuid4().hex}.jpg"
-    os.rename(current_path, output_path)
+        for f in filters:
+            filter_type = f["type"]
+            value = f["value"]
+            if filter_type not in FILTER_REGISTRY:
+                raise ValueError(f"Unsupported filter: {filter_type}")
+            image = FILTER_REGISTRY[filter_type](image, value)
 
-    filtered_url = await s3_repo.upload_filtered("filtered", output_path)
+        gc.collect()
+        buffer = BytesIO()
+        image.save(buffer, format="JPEG", quality=80, optimize=False)
+        buffer.seek(0)
 
-    timestamp = datetime.utcnow().isoformat()
-    redis_repo = RedisRepo()
-    await redis_repo.save_filter_history(user_id, filtered_url, filters, timestamp)
+        final_filename = f"filtered_{uuid.uuid4().hex}.jpg"
+        filtered_url = await s3_repo.upload_from_memory(buffer, "filtered", final_filename)
 
-    logging.info(f"[filter-usecase] uploaded to: {filtered_url}")
-    return filtered_url, timestamp
+        timestamp = datetime.utcnow().isoformat()
+        redis_repo = RedisRepo()
+        await redis_repo.save_filter_history(user_id, filtered_url, filters, timestamp)
+
+        return filtered_url, timestamp
+
+    finally:
+        try:
+
+            if original_file and os.path.exists(original_file):
+                os.remove(original_file)
+
+            if final_path and os.path.exists(final_path):
+                os.remove(final_path)
+
+        except Exception as e:
+
+            logging.warning(f"[cleanup] Failed to remove temp files: {e}")
+
+
+def save_image_to_buffer(image: Image.Image) -> BytesIO:
+    buffer = BytesIO()
+    image.save(buffer, format="JPEG", quality=80, optimize=False)
+    buffer.seek(0)
+    return buffer
