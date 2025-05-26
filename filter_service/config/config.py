@@ -10,7 +10,6 @@ class Config:
     redis_url: str = os.getenv("REDIS_URL")
     s3_bucket: str = os.getenv("S3_BUCKET")
     s3_region: str = os.getenv("S3_REGION")
-    grpc_port: int = int(os.getenv("GRPC_PORT"))
 
     RABBITMQ_HOST = os.getenv('RABBITMQ_HOST')
     RABBITMQ_USER = os.getenv('RABBITMQ_USER')

@@ -1,3 +1,4 @@
+from typing import List
 from pydantic import BaseModel
 
 
@@ -7,5 +8,6 @@ class FilterConfig(BaseModel):
 
 
 class FilterRequest(BaseModel):
-    image_id: str
-    filter: FilterConfig
+    user_id: int
+    image_url: str
+    filters: List[FilterConfig]

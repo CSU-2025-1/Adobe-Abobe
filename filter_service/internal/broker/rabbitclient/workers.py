@@ -33,29 +33,27 @@ async def consume_filters(channel: aio_pika.channel):
                 async for message in queue_iter:
                     async with message.process(ignore_processed=True):
                         data = json.loads(message.body.decode())
-                        logging.debug("📩 Received raw message:", data)
-                        logging.info("📩 Received raw message:", data)
-                        print("📩 Received raw message:", data)
-                        image_id = data["image_id"]
-                        filter_obj = data["filter"]
-                        redis_repo = RedisRepo()
+                        user_id = data['user_id']
+                        image_url = data["image_url"]
+                        filters = data["filters"]
                         s3_repo = S3Repo()
 
                         try:
-                            filtered_url = await apply_filter_usecase(
-                                image_id=image_id,
-                                filter=filter_obj,
-                                redis_repo=redis_repo,
+                            filtered_url, timestamp = await apply_filter_usecase(
+                                user_id=user_id,
+                                image_url=image_url,
+                                filters=filters,
                                 s3_repo=s3_repo
                             )
-                            logging.debug(f"✅ Filtered URL sent to filtered_image: {filtered_url}")
-                            logging.info(f"✅ Filtered URL sent to filtered_image: {filtered_url}")
-                            print(f"✅ Filtered URL sent to filtered_image: {filtered_url}")
 
                             logging.info(f"➡ reply_to: {message.reply_to}")
                             await channel.default_exchange.publish(
                                 aio_pika.Message(
-                                    body=json.dumps({"filtered_url": filtered_url}).encode(),
+                                    body=json.dumps({
+                                        "filtered_url": filtered_url,
+                                        "timestamp": timestamp,
+                                        "filters": filters
+                                    }).encode(),
                                     correlation_id=message.correlation_id
                                 ),
                                 routing_key=message.reply_to

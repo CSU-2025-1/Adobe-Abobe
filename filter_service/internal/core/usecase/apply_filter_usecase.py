@@ -1,33 +1,37 @@
+import os
+import uuid
 import asyncio
 import logging
+from datetime import datetime
 
-from internal.core.entity.image_data import ImageData
-from internal.repository.redis_repo import RedisRepo
 from internal.repository.s3_repo import S3Repo
 from utils.filters import _apply_filter
 from utils.image_loader import download_image
+from internal.repository.redis_repo import RedisRepo
+from utils import filters
 
 
 async def apply_filter_usecase(
-    image_id: str,
-    filter: dict,
-    redis_repo: RedisRepo,
+    user_id: str,
+    image_url: str,
+    filters: list[dict],
     s3_repo: S3Repo
-) -> str:
-    image_url = await redis_repo.get_current_version_url(image_id)
-    image_data = ImageData(image_id=image_id, image_url=image_url)
+) -> tuple[str, str]:
+    image_path = await download_image(image_url)
+    current_path = image_path
 
-    image_path = await download_image(image_data.image_url)
+    for f in filters:
+        loop = asyncio.get_running_loop()
+        current_path = await loop.run_in_executor(None, _apply_filter, current_path, f)
 
-    loop = asyncio.get_running_loop()
-    filtered_path = await loop.run_in_executor(None, _apply_filter, image_path, filter)
-    logging.debug(f"apply_filter_usecase - filtered_path: {filtered_path}")
-    logging.info(f"apply_filter_usecase - filtered_path: {filtered_path}")
-    filtered_url = await s3_repo.upload_filtered(image_id, filtered_path)
+    output_path = os.path.splitext(current_path)[0] + f"_final_{uuid.uuid4().hex}.jpg"
+    os.rename(current_path, output_path)
 
-    # Контроль версий
-    await redis_repo.push_new_version(image_id, filtered_url)
-    logging.debug(f"apply_filter_usecase - filtered_url: {filtered_url}")
-    logging.info(f"apply_filter_usecase - filtered_url: {filtered_url}")
+    filtered_url = await s3_repo.upload_filtered("filtered", output_path)
 
-    return filtered_url
+    timestamp = datetime.utcnow().isoformat()
+    redis_repo = RedisRepo()
+    await redis_repo.save_filter_history(user_id, filtered_url, filters, timestamp)
+
+    logging.info(f"[filter-usecase] uploaded to: {filtered_url}")
+    return filtered_url, timestamp

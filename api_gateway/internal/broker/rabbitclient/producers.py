@@ -114,14 +114,15 @@ async def send_upload_message(upload_request: UploadRequest):
 
 async def send_filters_message(filter_request: FilterRequest):
     payload = {
-        "image_id": filter_request.image_id,
-        "filter": {
-            "type": filter_request.filter.type,
-            "value": filter_request.filter.value
-        }
+        "user_id": filter_request.user_id,
+        "image_url": filter_request.image_url,
+        "filters": [f.dict() for f in filter_request.filters]
     }
 
     try:
-        return await publish_rpc(FILTER_QUEUE, payload)
+        result = await publish_rpc(FILTER_QUEUE, payload)
+        logging.info("✅ response from filter-service:", result)
+        return result
     except Exception as e:
         logging.info(f"[send_filters_message] RabbitMQ failed: {e}")
+        return None

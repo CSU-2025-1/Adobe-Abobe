@@ -13,9 +13,6 @@ async def publish(routing_key: str, payload: dict):
     try:
         channel = await get_channel()
         message = json.dumps(payload).encode()
-        logging.debug(f"Publishing to queue '{routing_key}':", payload)
-        logging.info(f"Publishing to queue '{routing_key}':", payload)
-        print(f"Publishing to queue '{routing_key}':", payload)
         await channel.default_exchange.publish(
             aio_pika.Message(body=message),
             routing_key=routing_key
@@ -25,15 +22,14 @@ async def publish(routing_key: str, payload: dict):
         raise
 
 
-async def send_filtered_image_message(filtered_url: str):
+async def send_filtered_image_message(filtered_url: str, timestamp: str, filters: list[dict]):
     payload = {
         "filtered_url": filtered_url,
+        "timestamp": timestamp,
+        "filters": filters,
     }
 
     try:
         await publish(FILTERED_IMAGE_QUEUE, payload)
-        logging.debug(f"✅ Filtered URL sent to filtered_image: {filtered_url}")
-        logging.info(f"✅ Filtered URL sent to filtered_image: {filtered_url}")
-        print(f"✅ Filtered URL sent to filtered_image: {filtered_url}")
     except Exception as e:
         logging.warning(f"[send_filters_message] RabbitMQ failed: {e}")

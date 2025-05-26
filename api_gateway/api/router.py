@@ -111,8 +111,12 @@ async def download_file(token: str, image_id: int):
 async def apply_filter(data: FilterRequest):
     try:
         response = await send_filters_message(data)
+        if not response:
+            raise HTTPException(status_code=500, detail="Filter service returned no response")
         return {
-            "filtered_url": response["filtered_url"]
+            "filtered_url": response["filtered_url"],
+            "timestamp": response["timestamp"],
+            "filters": response["filters"]
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"error: {str(e)}")
