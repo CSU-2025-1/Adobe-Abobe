@@ -57,7 +57,7 @@ async def upload_file(file: UploadFile = File(...), credentials: HTTPAuthorizati
                 content=file_data,
                 filename=file.filename,
                 content_type=file.content_type,
-                user_id=auth_validate["user_id"],
+                user_id=f"{auth_validate["user_id"]}",
             )
 
             response = await send_upload_message(image_data)
