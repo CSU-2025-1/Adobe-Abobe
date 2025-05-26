@@ -10,11 +10,11 @@ def apply_brightness(image: np.ndarray, value: float) -> np.ndarray:
 
 @register_filter("contrast")
 def apply_contrast(image: np.ndarray, value: float) -> np.ndarray:
-    lab = cv2.cvtColor(image, cv2.COLOR_RGB2LAB)
-    l, a, b = cv2.split(lab)
-    l = cv2.addWeighted(l, value, 0, 0, 0)
-    lab = cv2.merge((l, a, b))
-    return cv2.cvtColor(lab, cv2.COLOR_LAB2RGB)
+    factor = 131 * (value + 127) / (127 * (131 - value))
+    table = np.array([
+        np.clip(factor * (i - 127) + 127, 0, 255) for i in range(256)
+    ]).astype("uint8")
+    return cv2.LUT(image, table)
 
 
 @register_filter("blur")

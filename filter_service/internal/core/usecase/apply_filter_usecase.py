@@ -1,17 +1,16 @@
+import asyncio
 import gc
 import os
 import uuid
 import logging
 from datetime import datetime
-from PIL import Image
 from io import BytesIO
 import cv2
-import numpy as np
 
 from internal.repository.s3_repo import S3Repo
 from internal.repository.redis_repo import RedisRepo
 from utils.filters_registry import FILTER_REGISTRY
-from utils.image_loader import download_image
+from utils.image_loader import download_image_array
 
 
 async def apply_filter_usecase(
@@ -20,27 +19,25 @@ async def apply_filter_usecase(
         filters: list[dict],
         s3_repo: S3Repo
 ) -> tuple[str, str]:
-    image_path = await download_image(image_url)
-    original_file = image_path
+    original_file = None
     final_path = None
 
     try:
-        image = Image.open(image_path).convert("RGB")
-        image = np.array(image)
+        image = await download_image_array(image_url)
 
         for f in filters:
             filter_type = f["type"]
             value = f["value"]
             logging.info(f"[apply] {filter_type}={value}")
+
             if filter_type not in FILTER_REGISTRY:
                 raise ValueError(f"Unsupported filter: {filter_type}")
-            image = FILTER_REGISTRY[filter_type](image, value)
+
+            image = await asyncio.to_thread(FILTER_REGISTRY[filter_type], image, value)
 
         gc.collect()
         _, encoded_image = cv2.imencode('.jpg', cv2.cvtColor(image, cv2.COLOR_RGB2BGR))
-        buffer = BytesIO(encoded_image.tobytes())
-        buffer.seek(0)
-
+        buffer = BytesIO(memoryview(encoded_image))
         final_filename = f"filtered_{uuid.uuid4().hex}.jpg"
         filtered_url = await s3_repo.upload_from_memory(buffer, "filtered", final_filename)
 
