@@ -1,6 +1,6 @@
 import logging
 
-from fastapi import APIRouter, Query, HTTPException, UploadFile, File
+from fastapi import APIRouter, Query, HTTPException, UploadFile, File, Header
 from internal.core.entity.auth.auth_dto import AuthRequest
 from internal.core.entity.upload.upload_dto import UploadRequest
 from internal.core.entity.filter.filter_dto import FilterRequest
@@ -39,7 +39,10 @@ async def login(data: AuthRequest):
 
 # Upload / Download
 @router.post("/upload")
-async def upload_file(token: str, file: UploadFile = File(...)):
+async def upload_file(file: UploadFile = File(...), authorization: str = Header(...)):
+
+    token = authorization.replace("Bearer ", "") if authorization.startswith("Bearer ") else authorization
+
     auth_validate = await send_validate_message(token)
 
     if auth_validate["valid"]:
