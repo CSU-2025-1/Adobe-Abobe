@@ -72,45 +72,13 @@ async def send_validate_message(token: str):
 
 
 async def send_upload_message(upload_request: UploadRequest):
-    correlation_id = str(uuid.uuid4())
-    connection = await aio_pika.connect_robust("amqp://guest:guest@rabbit/")
-    channel = await connection.channel()
-
-    callback_queue = await channel.declare_queue(exclusive=True)
-
-    future = asyncio.get_event_loop().create_future()
-
-    async def on_response(mes: aio_pika.IncomingMessage):
-        if mes.correlation_id == correlation_id:
-            body = json.loads(mes.body.decode())
-            future.set_result(body)
-
-    await callback_queue.consume(on_response)
-
     payload = {
         "file_data": base64.b64encode(upload_request.content).decode(),
         "file_name": upload_request.filename,
         "content_type": upload_request.content_type,
         "user_id": upload_request.user_id,
     }
-
-    mes = aio_pika.Message(
-        body=json.dumps(payload).encode(),
-        reply_to=callback_queue.name,
-        correlation_id=correlation_id,
-        delivery_mode=aio_pika.DeliveryMode.PERSISTENT
-    )
-
-    await channel.default_exchange.publish(
-        mes, routing_key=UPLOAD_IMAGE_QUEUE
-    )
-
-    try:
-        response = await asyncio.wait_for(future, timeout=10)
-    except asyncio.TimeoutError:
-        raise Exception("RPC timeout")
-
-    return response
+    return await publish_rpc(UPLOAD_IMAGE_QUEUE, payload)
 
 
 async def send_filters_message(filter_request: FilterRequest):

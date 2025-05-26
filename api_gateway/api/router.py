@@ -1,6 +1,7 @@
 import logging
 
-from fastapi import APIRouter, Query, HTTPException, UploadFile, File, Header
+from fastapi import APIRouter, Query, HTTPException, UploadFile, File, Header, Security
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from internal.core.entity.auth.auth_dto import AuthRequest
 from internal.core.entity.upload.upload_dto import UploadRequest
 from internal.core.entity.filter.filter_dto import FilterRequest
@@ -8,6 +9,7 @@ from internal.broker.rabbitclient.producers import send_authorization_message, s
     send_filters_message, send_upload_message
 
 router = APIRouter()
+security = HTTPBearer()
 
 
 # Auth
@@ -39,9 +41,9 @@ async def login(data: AuthRequest):
 
 # Upload / Download
 @router.post("/upload")
-async def upload_file(file: UploadFile = File(...), authorization: str = Header(...)):
+async def upload_file(file: UploadFile = File(...), credentials: HTTPAuthorizationCredentials = Security(security)):
 
-    token = authorization.replace("Bearer ", "") if authorization.startswith("Bearer ") else authorization
+    token = credentials.credentials
 
     auth_validate = await send_validate_message(token)
 
@@ -55,7 +57,7 @@ async def upload_file(file: UploadFile = File(...), authorization: str = Header(
                 content=file_data,
                 filename=file.filename,
                 content_type=file.content_type,
-                user_id=auth_validate["user_id"],
+                user_id=f"{auth_validate["user_id"]}",
             )
 
             response = await send_upload_message(image_data)
