@@ -6,6 +6,7 @@ from internal.core.entity.upload.upload_dto import UploadRequest
 from internal.broker.rabbitclient.producers import send_auth_message, send_authorization_message, send_image_message
 from internal.core.entity.filter.filter_dto import FilterRequest
 from internal.broker.rabbitclient.producers import send_filters_message
+from fastapi.responses import RedirectResponse
 
 router = APIRouter()
 
@@ -93,6 +94,7 @@ async def upload_file(file: UploadFile = File(...)):
 
         except Exception as e:
             raise HTTPException(status_code=500, detail=f"error: {str(e)}")
+
 
 
 @router.get("/download")

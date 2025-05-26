@@ -20,19 +20,32 @@ import {
 import axios from 'axios';
 
 export default function PhotoUploadPage() {
-  const [image, setImage] = useState(null);
+  const [previewUrl, setPreviewUrl] = useState(null);
+  const [imageId, setImageId] = useState(null);
+  const [filters, setFilters] = useState({
+    brightness: 1,
+    contrast: 1,
+    sharpness: 1,
+    color: 1,
+    blur: 0,
+    gamma: 1,
+    sepia: 0,
+    temperature: 5000,
+    exposure: 0,
+    hue: 0,
+  });
 
   const handleUpload = async (e) => {
     const selectedFile = e.target.files[0];
     if (!selectedFile) return;
 
-    setImage(URL.createObjectURL(selectedFile));
-
     const formData = new FormData();
     formData.append('file', selectedFile);
 
     try {
-      await axios.post('http://localhost:8000/upload/', formData);
+      const response = await axios.post('http://localhost:8000/upload', formData);
+      setImageId(response.data.image_id);
+      setPreviewUrl(URL.createObjectURL(selectedFile));
       console.log('Изображение успешно загружено');
     } catch (error) {
       console.error('Ошибка при загрузке:', error);
@@ -40,13 +53,57 @@ export default function PhotoUploadPage() {
     }
   };
 
-  const handleSave = () => {
-    if (!image) {
+  const handleFilterChange = (type, value) => {
+    setFilters((prev) => ({ ...prev, [type]: value }));
+  };
+
+  const getCssFilterString = () => {
+    return `
+      brightness(${filters.brightness})
+      contrast(${filters.contrast})
+      saturate(${filters.color})
+      sepia(${filters.sepia})
+      blur(${filters.blur}px)
+      hue-rotate(${filters.hue}deg)
+    `;
+  };
+
+  const handleSave = async () => {
+    if (!imageId) {
       alert('Сначала загрузите изображение.');
-    } else {
-      window.open('http://localhost:8000/download/last', '_blank');
+      return;
+    }
+
+    try {
+      const response = await axios.post('http://localhost:8000/editphoto/filter/', {
+        image_id: imageId,
+        filters: filters,
+      });
+
+      if (response.data.filtered_url) {
+        window.open(response.data.filtered_url, '_blank');
+      } else {
+        alert('Не удалось сохранить изображение.');
+      }
+    } catch (error) {
+      console.error('Ошибка при сохранении:', error);
+      alert('Произошла ошибка при сохранении изображения');
     }
   };
+
+  const renderSlider = (label, type, min, max, step) => (
+    <SliderGroup key={type}>
+      <SliderLabel>{label}: {filters[type]}</SliderLabel>
+      <Slider
+        type="range"
+        min={min}
+        max={max}
+        step={step}
+        value={filters[type]}
+        onChange={(e) => handleFilterChange(type, parseFloat(e.target.value))}
+      />
+    </SliderGroup>
+  );
 
   return (
     <Container>
@@ -63,54 +120,24 @@ export default function PhotoUploadPage() {
       <MainContent>
         <ImageArea>
           <ImageWrapper>
-            {image ? (
-              <PreviewImage src={image} alt="Загруженное изображение" />
+            {previewUrl ? (
+              <PreviewImage src={previewUrl} alt="Preview" style={{ filter: getCssFilterString() }} />
             ) : (
               <Placeholder>Изображение не загружено</Placeholder>
             )}
           </ImageWrapper>
 
           <SlidersBlock>
-            <SliderGroup>
-              <SliderLabel>Яркость</SliderLabel>
-              <Slider type="range" min="0" max="20" orient="horizontal" />
-            </SliderGroup>
-            <SliderGroup>
-              <SliderLabel>Контраст</SliderLabel>
-              <Slider type="range" min="0" max="20" orient="horizontal" />
-            </SliderGroup>
-            <SliderGroup>
-              <SliderLabel>Резкость</SliderLabel>
-              <Slider type="range" min="0" max="20" orient="horizontal" />
-            </SliderGroup>
-            <SliderGroup>
-              <SliderLabel>Насыщенность цвета</SliderLabel>
-              <Slider type="range" min="0" max="20" orient="horizontal" />
-            </SliderGroup>
-            <SliderGroup>
-              <SliderLabel>Размытие</SliderLabel>
-              <Slider type="range" min="0" max="20" orient="horizontal" />
-            </SliderGroup>
-            <SliderGroup>
-              <SliderLabel>Гамма-коррекция</SliderLabel>
-              <Slider type="range" min="0" max="20" orient="horizontal" />
-            </SliderGroup>
-            <SliderGroup>
-              <SliderLabel>Эффект сепии</SliderLabel>
-              <Slider type="range" min="0" max="20" orient="horizontal" />
-            </SliderGroup>
-            <SliderGroup>
-              <SliderLabel>Цветовая температура</SliderLabel>
-              <Slider type="range" min="0" max="20" orient="horizontal" />
-            </SliderGroup>
-            <SliderGroup>
-              <SliderLabel>Экспозиция</SliderLabel>
-              <Slider type="range" min="0" max="20" orient="horizontal" />
-            </SliderGroup>
-            <SliderGroup>
-              <SliderLabel>Смещение оттенка</SliderLabel>
-              <Slider type="range" min="0" max="20" orient="horizontal" />
-            </SliderGroup>
+            {renderSlider("Яркость", "brightness", 0.0, 2.0, 0.01)}
+            {renderSlider("Контраст", "contrast", 0.0, 2.0, 0.01)}
+            {renderSlider("Резкость", "sharpness", 0.0, 2.0, 0.01)}
+            {renderSlider("Насыщ. цвета", "color", 0.0, 2.0, 0.01)}
+            {renderSlider("Размытие", "blur", 0.0, 10.0, 0.1)}
+            {renderSlider("Гамма", "gamma", 0.5, 2.5, 0.1)}
+            {renderSlider("Сепия", "sepia", 0.0, 1.0, 0.01)}
+            {renderSlider("Температура", "temperature", 3000, 8000, 100)}
+            {renderSlider("Экспозиция", "exposure", -1.0, 1.0, 0.01)}
+            {renderSlider("Оттенок", "hue", 0, 360, 1)}
           </SlidersBlock>
         </ImageArea>
       </MainContent>

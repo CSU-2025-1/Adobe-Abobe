@@ -97,6 +97,14 @@ services:
 #      minio:
 #        condition: service_started
 
+  frontend:
+    build: ./frontend
+    container_name: frontend
+    ports:
+      - "3000:80"
+    depends_on:
+      - api-gateway
+
 volumes:
   postgres_data:
   minio-data:

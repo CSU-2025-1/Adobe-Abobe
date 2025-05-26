@@ -1,7 +1,7 @@
 import asyncio
 import logging
 import uvicorn
-
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi import FastAPI
 from api.router import router
 from internal.broker.rabbitclient.workers import wrap_consumer
@@ -9,6 +9,14 @@ from internal.broker.rabbitclient.workers import validate_token, get_token, get_
     get_filtered_image
 
 app = FastAPI()
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:3000"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 app.include_router(router)
 logging.basicConfig(
