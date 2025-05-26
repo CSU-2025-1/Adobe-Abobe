@@ -65,4 +65,4 @@ async def upload_to_s3(image_id: str, content: bytes, content_type: str):
     except ClientError as e:
         raise Exception(f"Failed to upload: {e}")
 
-    return f"http://localhost:9000/{bucket_name}/{quote(image_id)}"
+    return f"http://localhost:9000/{bucket_name}/{quote(image_id)}", f"http://minio:9000/{bucket_name}/{quote(image_id)}"

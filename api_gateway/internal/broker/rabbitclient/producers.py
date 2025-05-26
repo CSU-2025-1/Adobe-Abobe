@@ -7,10 +7,8 @@ import uuid
 import aio_pika
 
 from internal.broker.rabbitclient.client import get_channel
-from internal.broker.rabbitclient.workers import get_token, validate_token, get_uploaded_image_id, get_filtered_image
 from internal.core.entity.auth.auth_dto import AuthRequest
 from internal.core.entity.upload.upload_dto import UploadRequest
-from tenacity import retry, stop_after_attempt, wait_fixed
 from internal.core.entity.filter.filter_dto import FilterRequest
 
 VALIDATION_QUEUE = "validation"
@@ -73,17 +71,45 @@ async def send_validate_message(token: str):
 
 
 async def send_upload_message(upload_request: UploadRequest):
+    correlation_id = str(uuid.uuid4())
+    connection = await aio_pika.connect_robust("amqp://guest:guest@rabbit/")
+    channel = await connection.channel()
+
+    callback_queue = await channel.declare_queue(exclusive=True)
+
+    future = asyncio.get_event_loop().create_future()
+
+    async def on_response(mes: aio_pika.IncomingMessage):
+        if mes.correlation_id == correlation_id:
+            body = json.loads(mes.body.decode())
+            future.set_result(body)
+
+    await callback_queue.consume(on_response)
+
     payload = {
         "file_data": base64.b64encode(upload_request.content).decode(),
         "file_name": upload_request.filename,
         "content_type": upload_request.content_type,
-        "user_id": upload_request.user_id
+        "user_id": upload_request.user_id,
     }
 
+    mes = aio_pika.Message(
+        body=json.dumps(payload).encode(),
+        reply_to=callback_queue.name,
+        correlation_id=correlation_id,
+        delivery_mode=aio_pika.DeliveryMode.PERSISTENT
+    )
+
+    await channel.default_exchange.publish(
+        mes, routing_key=UPLOAD_IMAGE_QUEUE
+    )
+
     try:
-        return await publish_rpc(UPLOAD_IMAGE_QUEUE, payload)
-    except Exception as e:
-        logging.warning(f"[send_image_message] RabbitMQ failed: {e}")
+        response = await asyncio.wait_for(future, timeout=10)
+    except asyncio.TimeoutError:
+        raise Exception("RPC timeout")
+
+    return response
 
 
 async def send_filters_message(filter_request: FilterRequest):
