@@ -41,13 +41,14 @@ async def login(data: AuthRequest):
 
 # Upload / Download
 @router.post("/upload")
-async def upload_file(file: UploadFile = File(...), credentials: HTTPAuthorizationCredentials = Security(security)):
+async def upload_file(file: UploadFile = File(...)):
+# async def upload_file(file: UploadFile = File(...), credentials: HTTPAuthorizationCredentials = Security(security)):
 
-    token = credentials.credentials
-
-    auth_validate = await send_validate_message(token)
-
-    if auth_validate["valid"]:
+    # token = credentials.credentials
+    #
+    # auth_validate = await send_validate_message(token)
+    #
+    # if auth_validate["valid"]:
         try:
             file_data = await file.read()
             logging.info(f"file name: {file.filename}")
@@ -57,7 +58,7 @@ async def upload_file(file: UploadFile = File(...), credentials: HTTPAuthorizati
                 content=file_data,
                 filename=file.filename,
                 content_type=file.content_type,
-                user_id=f"{auth_validate['user_id']}",
+                user_id="111",
             )
 
             response = await send_upload_message(image_data)
@@ -73,8 +74,8 @@ async def upload_file(file: UploadFile = File(...), credentials: HTTPAuthorizati
 
         except Exception as e:
             raise HTTPException(status_code=500, detail=f"error: {str(e)}")
-    else:
-        raise HTTPException(status_code=401, detail="Invalid token")
+    # else:
+    #     raise HTTPException(status_code=401, detail="Invalid token")
 
 
 @router.get("/download")
