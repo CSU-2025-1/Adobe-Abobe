@@ -101,6 +101,20 @@ services:
       minio:
         condition: service_started
 
+  story-service:
+    build: ./story_service
+    #    ports:
+    #      - "50051:50051"
+    env_file:
+      - ./story_service/.env
+    depends_on:
+      rabbit:
+        condition: service_healthy
+      redis:
+        condition: service_started
+      minio:
+        condition: service_started
+
   filter-service:
     build: ./filter_service
     env_file:
@@ -113,13 +127,15 @@ services:
       minio:
         condition: service_started
 
-  frontend:
-    build: ./frontend
-    container_name: frontend
-    ports:
-      - "3000:80"
-    depends_on:
-      - nginx
+
+
+#  frontend:
+#    build: ./frontend
+#    container_name: frontend
+#    ports:
+#      - "3000:80"
+#    depends_on:
+#      - nginx
 
 volumes:
   postgres_data:

@@ -1,13 +1,14 @@
 import logging
-
+from internal.broker.rabbitclient.producers import publish_rpc
 from fastapi import APIRouter, Query, HTTPException, UploadFile, File, Header, Security
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from internal.core.entity.auth.auth_dto import AuthRequest
+from internal.core.entity.story.story_dto import StoryRequest
 from internal.core.entity.upload.upload_dto import UploadRequest
 from internal.core.entity.filter.filter_dto import FilterRequest
 from internal.broker.rabbitclient.producers import send_authorization_message, send_validate_message, \
     send_filters_message, send_upload_message
-
+from fastapi.responses import JSONResponse
 router = APIRouter()
 security = HTTPBearer()
 
@@ -75,6 +76,28 @@ async def upload_file(file: UploadFile = File(...), credentials: HTTPAuthorizati
             raise HTTPException(status_code=500, detail=f"error: {str(e)}")
     else:
         raise HTTPException(status_code=401, detail="Invalid token")
+
+@router.post("/story")
+async def get_user_story(data: StoryRequest):
+    try:
+        response = await publish_rpc("filter_story", {
+            "user_id": data.user_id,
+            "timestamp": data.timestamp
+        })
+
+        if "detail" in response:
+            raise HTTPException(status_code=404, detail=response["detail"])
+
+        if "url" not in response or "filters" not in response:
+            raise HTTPException(status_code=500, detail="Некорректный формат ответа от сервиса")
+
+        return JSONResponse(content=response)
+
+    except HTTPException as e:
+        raise e
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Ошибка получения истории: {str(e)}")
 
 
 @router.get("/download")
