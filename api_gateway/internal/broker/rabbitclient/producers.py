@@ -106,13 +106,13 @@ from internal.broker.rabbitclient.client import get_channel
 from internal.core.entity.auth.auth_dto import AuthRequest
 from internal.core.entity.upload.upload_dto import UploadRequest
 from internal.core.entity.filter.filter_dto import FilterRequest
-
+from internal.core.entity.story.story_dto import StoryRequest
 
 VALIDATION_QUEUE = "validation"
 AUTHORIZATION_QUEUE = "authorization"
 UPLOAD_IMAGE_QUEUE = "upload"
 FILTER_QUEUE = "filter"
-
+STORY_QUEUE = "filter_story"
 
 
 async def publish_rpc(routing_key: str, payload: dict, timeout: float = 30.0):
@@ -179,6 +179,15 @@ async def send_upload_message(upload_request: UploadRequest):
         "user_id": upload_request.user_id,
     }
     return await publish_rpc(UPLOAD_IMAGE_QUEUE, payload)
+
+
+async def send_story_message(story_request: StoryRequest):
+    payload = {
+        "user_id": story_request.user_id,
+        "timestamp": story_request.timestamp
+    }
+    return await publish_rpc(STORY_QUEUE, payload)
+
 
 async def send_filters_message(filter_request: FilterRequest):
     payload = {
