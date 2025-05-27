@@ -1,12 +1,14 @@
 import logging
 
-from fastapi import APIRouter, Query, HTTPException, UploadFile, File, Header, Security
+from fastapi import APIRouter, HTTPException, UploadFile, File, Security
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from internal.core.entity.auth.auth_dto import AuthRequest
+from internal.core.entity.story.story_dto import StoryRequest
 from internal.core.entity.upload.upload_dto import UploadRequest
 from internal.core.entity.filter.filter_dto import FilterRequest
 from internal.broker.rabbitclient.producers import send_authorization_message, send_validate_message, \
-    send_filters_message, send_upload_message
+    send_filters_message, send_upload_message, send_story_message
+from fastapi.responses import JSONResponse
 
 router = APIRouter()
 security = HTTPBearer()
@@ -39,7 +41,7 @@ async def login(data: AuthRequest):
         raise HTTPException(status_code=400, detail=str(e))
 
 
-# Upload / Download
+# Upload
 @router.post("/upload")
 async def upload_file(file: UploadFile = File(...)):
 # async def upload_file(file: UploadFile = File(...), credentials: HTTPAuthorizationCredentials = Security(security)):
@@ -78,12 +80,30 @@ async def upload_file(file: UploadFile = File(...)):
     #     raise HTTPException(status_code=401, detail="Invalid token")
 
 
-@router.get("/download")
-async def download_file(token: str, image_id: int):
+@router.post("/story")
+async def get_user_story(data: StoryRequest, credentials: HTTPAuthorizationCredentials = Security(security)):
+
+    token = credentials.credentials
+
     auth_validate = await send_validate_message(token)
 
     if auth_validate["valid"]:
-        pass
+        try:
+            response = await send_story_message(data)
+
+            if "detail" in response:
+                raise HTTPException(status_code=404, detail=response["detail"])
+
+            if "url" not in response or "filters" not in response:
+                raise HTTPException(status_code=500, detail="Некорректный формат ответа от сервиса")
+
+            return JSONResponse(content=response)
+
+        except HTTPException as e:
+            raise e
+
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"Ошибка получения истории: {str(e)}")
     else:
         raise HTTPException(status_code=401, detail="Invalid token")
 
@@ -102,35 +122,22 @@ async def apply_filter(data: FilterRequest):
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"error: {str(e)}")
-"""
-@router.post("/editphoto/filter/")
-async def apply_filter(token: str, data: FilterRequest):
-    auth_validate = await send_validate_message(token)
-
-    if auth_validate["valid"]:
-        try:
-            response = await send_filters_message(data)
-            return {
-                "filtered_url": response["filtered_url"]
-            }
-        except Exception as e:
-            raise HTTPException(status_code=500, detail=f"error: {str(e)}")
-    else:
-        raise HTTPException(status_code=401, detail="Invalid token")
-"""
 
 
-# VCS
-@router.get("/vcs/forward")
-async def vcs_forward(version: str = Query(...)):
-    pass
-
-
-@router.get("/vcs/backward")
-async def vcs_backward():
-    pass
-
-
-@router.post("/vcs")
-async def vcs_save():
-    pass
+# @router.post("/editphoto/filter")
+# async def apply_filter(data: FilterRequest, credentials: HTTPAuthorizationCredentials = Security(security)):
+#
+#     token = credentials.credentials
+#
+#     auth_validate = await send_validate_message(token)
+#
+#     if auth_validate["valid"]:
+#         try:
+#             response = await send_filters_message(data)
+#             return {
+#                 "filtered_url": response["filtered_url"]
+#             }
+#         except Exception as e:
+#             raise HTTPException(status_code=500, detail=f"error: {str(e)}")
+#     else:
+#         raise HTTPException(status_code=401, detail="Invalid token")

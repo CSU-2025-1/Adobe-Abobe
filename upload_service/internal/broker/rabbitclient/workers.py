@@ -3,6 +3,7 @@ import base64
 import logging
 import aio_pika
 import json
+import time
 
 from internal.broker.rabbitclient.client import get_channel
 from internal.broker.rabbitclient.producers import send_image_id_message
@@ -11,25 +12,25 @@ from internal.core.usecase.upload import handle_upload
 
 UPLOAD_IMAGE_REQUEST_QUEUE = "upload"
 
-
 async def wrap_consumer(consumer_fn, name):
     while True:
         try:
             channel = await get_channel()
-            await consumer_fn(channel)
+            await consumer_fn(channel, name)
         except asyncio.CancelledError:
             break
         except Exception as e:
-            logging.exception(f"[{name}] error in consumer, restart 5 sec: {e}")
+            logging.exception(f"[{name}] error in consumer, restart in 5 sec: {e}")
             await asyncio.sleep(5)
 
-
-async def consume_images_data(channel: aio_pika.channel):
+async def consume_images_data(channel: aio_pika.channel, consumer_name: str):
+    await channel.set_qos(prefetch_count=5)
     queue = await channel.declare_queue(UPLOAD_IMAGE_REQUEST_QUEUE, durable=True)
 
     async with queue.iterator() as queue_iter:
         async for message in queue_iter:
             async with message.process():
+                start_time = time.time()
                 try:
                     data = json.loads(message.body.decode())
                     file_data = base64.b64decode(data["file_data"])
@@ -38,7 +39,7 @@ async def consume_images_data(channel: aio_pika.channel):
                     content_type = data["content_type"]
                     user_id = data["user_id"]
 
-                    logging.info(f"[upload] {file_name}")
+                    logging.info(f"[{consumer_name}] Uploading {file_name}")
 
                     image = Image(
                         image_id="",
@@ -55,6 +56,7 @@ async def consume_images_data(channel: aio_pika.channel):
                         "status": "success",
                         "image_url": image_url,
                     }
+
                     await channel.default_exchange.publish(
                         aio_pika.Message(
                             body=json.dumps(response_payload).encode(),
@@ -63,5 +65,8 @@ async def consume_images_data(channel: aio_pika.channel):
                         routing_key=message.reply_to
                     )
 
+                    elapsed = time.time() - start_time
+                    logging.info(f"[{consumer_name}] Done {file_name} in {elapsed:.2f}s")
+
                 except Exception as e:
-                    logging.warning(f"[upload_worker] Failed to process upload: {e}")
+                    logging.warning(f"[{consumer_name}] Failed to process upload: {e}")
