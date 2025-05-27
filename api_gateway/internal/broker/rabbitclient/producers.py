@@ -5,7 +5,7 @@ import logging
 import uuid
 import aio_pika
 
-from internal.broker.rabbitclient.client import get_channel, setup_callback_queue, _pending_futures, _callback_queue
+from internal.broker.rabbitclient.client import get_channel
 from internal.core.entity.auth.auth_dto import AuthRequest
 from internal.core.entity.upload.upload_dto import UploadRequest
 from internal.core.entity.filter.filter_dto import FilterRequest
@@ -19,18 +19,30 @@ STORY_QUEUE = "filter_story"
 
 
 async def publish_rpc(routing_key: str, payload: dict, timeout: float = 5.0):
-    await setup_callback_queue()
     channel = await get_channel()
-
+    callback_queue = await channel.declare_queue(exclusive=True, auto_delete=True)
     correlation_id = str(uuid.uuid4())
-    future = asyncio.get_running_loop().create_future()
-    _pending_futures[correlation_id] = future
 
-    logging.debug(f"📤 Publishing to {routing_key}, correlation_id={correlation_id}")
+    future = asyncio.get_event_loop().create_future()
+
+    async def on_response(message: aio_pika.IncomingMessage):
+        logging.info(f"📨 Received response on callback_queue: correlation_id={message.correlation_id}")
+        if message.correlation_id == correlation_id:
+            try:
+                decoded = json.loads(message.body.decode())
+                future.set_result(decoded)
+                logging.info(f"✅ Matched response: {decoded}")
+            except Exception as e:
+                logging.error(f"❌ Failed to decode response: {e}")
+            await message.ack()
+
+    await callback_queue.consume(on_response)
+
+    logging.info(f"📤 Publishing to {routing_key}, waiting reply on {callback_queue.name}")
     await channel.default_exchange.publish(
         aio_pika.Message(
             body=json.dumps(payload).encode(),
-            reply_to=_callback_queue.name,
+            reply_to=callback_queue.name,
             correlation_id=correlation_id,
         ),
         routing_key=routing_key,
@@ -39,7 +51,6 @@ async def publish_rpc(routing_key: str, payload: dict, timeout: float = 5.0):
     try:
         return await asyncio.wait_for(future, timeout=timeout)
     except asyncio.TimeoutError:
-        await _pending_futures.pop(correlation_id, None)
         raise Exception("RPC timeout")
 
 
