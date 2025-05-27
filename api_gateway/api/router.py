@@ -7,7 +7,7 @@ from internal.core.entity.story.story_dto import StoryRequest
 from internal.core.entity.upload.upload_dto import UploadRequest
 from internal.core.entity.filter.filter_dto import FilterRequest
 from internal.broker.rabbitclient.producers import send_authorization_message, send_validate_message, \
-    send_filters_message, send_upload_message, send_story_message
+    send_filters_message, send_upload_message
 from fastapi.responses import JSONResponse
 
 router = APIRouter()

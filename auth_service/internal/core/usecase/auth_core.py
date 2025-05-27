@@ -1,3 +1,5 @@
+from sys import exception
+import asyncio
 import bcrypt
 import jwt
 from config.config import config
@@ -10,19 +12,36 @@ class AuthCore:
         self.pg = pg_repo
         self.redis = redis_repo
 
-    def register_user(self, login: str, password: str):
-        if self.pg.get_user_by_login(login):
+    async def register_user(self, login: str, password: str):
+        if await self.pg.get_user_by_login(login):
             raise ValueError("User already exists")
-
-        hashed = bcrypt.hashpw(password.encode(), bcrypt.gensalt()).decode()
-        user_id = self.pg.create_user(login, hashed)
+        hashed = await asyncio.to_thread(self.hash_sync, password)
+        # hashed = bcrypt.hashpw(password.encode(), bcrypt.gensalt()).decode()
+        # user_id = self.pg.create_user(login, hashed)
+        user_id = await self.pg.create_user(login, hashed)
         return self._generate_tokens(user_id)
 
-    def login(self, login: str, password: str):
-        user = self.pg.get_user_by_login(login)
-        if not user or not bcrypt.checkpw(password.encode(), user[1].encode()):
+    def hash_sync(self, password):
+        return bcrypt.hashpw(password.encode(), bcrypt.gensalt()).decode()
+
+    async def login(self, login: str, password: str):
+        # user = self.pg.get_user_by_login(login)
+        user = await self.pg.get_user_by_login(login)
+        if not user:
+            raise ValueError("Invalid credentials")
+        valid = await asyncio.to_thread(self.check_password, password, user[1])
+        if not valid:
             raise ValueError("Invalid credentials")
         return self._generate_tokens(user[0])
+        # user = self.pg.get_user_by_login(login)
+        # if not user or not bcrypt.checkpw(password.encode(), user[1].encode()):
+        #     raise ValueError("Invalid credentials")
+        # return self._generate_tokens(user[0])
+
+
+    def check_password(self, password: str, hashed: str) -> bool:
+        return bcrypt.checkpw(password.encode(), hashed.encode())
+
 
     def validate_token(self, token: str):
         try:

@@ -3,6 +3,7 @@ import logging
 import aio_pika
 import json
 
+import asyncpg
 import psycopg2
 
 from config.config import config
@@ -25,14 +26,15 @@ pg_repo = PostgresRepo(conn)
 pg_repo.init_schema()
 redis_repo = RedisRepo()
 
+
 auth_core = AuthCore(pg_repo, redis_repo)
 
 
-async def wrap_consumer(consumer_fn, name):
+async def wrap_consumer(auth_core1, consumer_fn, name):
     while True:
         try:
             channel = await get_channel()
-            await consumer_fn(channel)
+            await consumer_fn(channel, auth_core1)
         except asyncio.CancelledError:
             break
         except Exception as e:
@@ -41,7 +43,7 @@ async def wrap_consumer(consumer_fn, name):
 
 
 # Проверить актуальность токена
-async def check_authorization(channel: aio_pika.channel):
+async def check_authorization(channel: aio_pika.channel, auth_core1):
     queue = await channel.declare_queue(VALIDATION_QUEUE, durable=True)
 
     async with queue.iterator() as queue_iter:
@@ -66,7 +68,7 @@ async def check_authorization(channel: aio_pika.channel):
 
 
 # Отправить токены после авторизации
-async def consume_authorization(channel):
+async def consume_authorization(channel, auth_core1):
     queue = await channel.declare_queue(AUTHORIZATION_QUEUE, durable=True)
 
     async with queue.iterator() as queue_iter:
@@ -76,18 +78,32 @@ async def consume_authorization(channel):
                 command = data["command"]
                 login = data["login"]
                 password = data["password"]
+                response = {}
                 try:
                     if command == "login":
-                        access_token, refresh_token = auth_core.login(login, password)
+                        tokens = await auth_core1.login(login, password)
                     else:
-                        access_token, refresh_token = auth_core.register_user(login, password)
+                        tokens = await auth_core1.register_user(login, password)
+                    access_token, refresh_token = tokens
+                    response = {
+                        "status": "success",
+                        "access_token": access_token,
+                        "refresh_token": refresh_token
+                    }
+                except Exception as e:
+                    logging.warning(f"Login failed for {login}: {e}")
+                    response = {
+                        "status": "error",
+                        "detail": str(e)
+                    }
 
+                try:
+                    if not message.reply_to:
+                        logging.warning("[auth] Missing reply_to — cannot respond to RPC")
+                        return
                     await channel.default_exchange.publish(
                         aio_pika.Message(
-                            body=json.dumps({
-                                "access_token": access_token,
-                                "refresh_token": refresh_token
-                            }).encode(),
+                            body=json.dumps(response).encode(),
                             correlation_id=message.correlation_id
                         ),
                         routing_key=message.reply_to
