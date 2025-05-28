@@ -43,7 +43,7 @@ export default function PhotoUploadPage() {
   formData.append('file', selectedFile);
 
   try {
-    const response = await axios.post('http://localhost:8000/upload', formData);
+    const response = await axios.post('http://localhost/upload', formData);
 
     console.log('Ответ сервера:', response.data);
 
@@ -86,7 +86,7 @@ export default function PhotoUploadPage() {
     }
 
     try {
-      const response = await axios.post('http://localhost:8000/editphoto/filter/', {
+      const response = await axios.post('http://localhost/editphoto/filter/', {
         image_id: imageId,
         filters: filters,
       });
