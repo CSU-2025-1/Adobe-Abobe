@@ -18,13 +18,13 @@ redis_repo = RedisRepo()
 
 
 async def serve() -> None:
-    await s3_repo.init_client()  # Инициализация общего клиента здесь
+    await s3_repo.init_client()
     try:
         await asyncio.gather(
             *(wrap_consumer(consume_filters, f"consume_filters_{i}") for i in range(10))
         )
     finally:
-        await s3_repo.close_client()  # Закрытие клиента при завершении
+        await s3_repo.close_client()
 
 if __name__ == "__main__":
     loop = asyncio.get_event_loop()
