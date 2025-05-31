@@ -5,7 +5,8 @@ from concurrent import futures
 import concurrent.futures
 
 from config.config import config
-from internal.core.usecase.auth_core import AuthCore
+# from internal.core.usecase.auth_core import AuthCore
+from internal.repository.pg_instances import init_pg_repo, get_pg_repo
 from internal.repository.postgres_repo import PostgresRepo
 from internal.repository.redis_repo import RedisRepo
 #from internal.delivery.grpc.auth_handler import AuthService
@@ -15,10 +16,12 @@ from internal.broker.rabbitclient.workers import wrap_consumer, consume_token_re
 
 import asyncpg
 
-
 async def main():
     # создание бд
     DBInit.create_database_if_not_exists()
+
+    # await init_pg_repo()
+    # redis_repo = RedisRepo()
 
     pool = await asyncpg.create_pool(
         user=config.db_user,
@@ -26,19 +29,32 @@ async def main():
         database=config.db_name,
         host=config.db_host
     )
-    redis_repo = RedisRepo()
+    # redis_repo = RedisRepo()
+    await init_pg_repo()
+    # pg_repo = get_pg_repo()
     pg_repo = PostgresRepo(pool)
     await pg_repo.init_schema()
-    auth_core = AuthCore(pg_repo, redis_repo)
+    #
+    #
+    #
+    # auth_core = AuthCore(pg_repo, redis_repo)
+
+
+
     # CONSUMER_COUNT = 10
     # await asyncio.gather(
     #     # wrap_consumer(auth_core, check_authorization, "check_authorization"),
     #     # wrap_consumer(auth_core, consume_authorization, "authorization"),
     #     # wrap_consumer(consume_token_refresh, "refresh_token")
     # )
+    # await asyncio.gather(
+    #     *(wrap_consumer(auth_core, check_authorization, f"check_authorization_{i}") for i in range(10)),
+    #     *(wrap_consumer(auth_core, consume_authorization, f"authorization_{i}") for i in range(10))
+    # )
+
     await asyncio.gather(
-        *(wrap_consumer(auth_core, check_authorization, f"check_authorizatio_{i}") for i in range(10)),
-        *(wrap_consumer(auth_core, consume_authorization, f"authorization_{i}") for i in range(10))
+        *(wrap_consumer(pg_repo, check_authorization, f"check_authorization_{i}") for i in range(10)),
+        *(wrap_consumer(pg_repo, consume_authorization, f"authorization_{i}") for i in range(10))
     )
 
 

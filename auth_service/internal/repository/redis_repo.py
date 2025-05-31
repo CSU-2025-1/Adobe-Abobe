@@ -12,3 +12,5 @@ class RedisRepo:
 
     def get_refresh_token(self, user_id):
         return self.client.get(f"refresh:{user_id}")
+
+redis_repo = RedisRepo()
