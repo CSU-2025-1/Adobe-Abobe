@@ -16,5 +16,12 @@ class Config:
     RABBITMQ_PASS = os.getenv('RABBITMQ_PASS')
     RABBITMQ_PORT = os.getenv('RABBITMQ_PORT')
 
+    S3_ENDPOINT_URL = os.getenv("S3_ENDPOINT_URL")
+    AWS_ACCESS_KEY_ID = os.getenv("AWS_ACCESS_KEY_ID")
+    AWS_SECRET_ACCESS_KEY = os.getenv("AWS_SECRET_ACCESS_KEY")
+    S3_BUCKET = os.getenv("S3_BUCKET")
+    S3_REGION = os.getenv("S3_REGION")
+    S3_PUBLIC_URL = os.getenv("S3_PUBLIC_URL")
+
 
 config = Config()

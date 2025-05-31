@@ -15,9 +15,9 @@ class S3Repo:
             self.s3_client = await self.session.create_client(
                 's3',
                 region_name=config.s3_region,
-                endpoint_url=os.getenv("S3_ENDPOINT_URL"),
-                aws_access_key_id=os.getenv("AWS_ACCESS_KEY_ID"),
-                aws_secret_access_key=os.getenv("AWS_SECRET_ACCESS_KEY"),
+                endpoint_url=config.s3_endpoint_url,
+                aws_access_key_id=config.aws_access_kry_id,
+                aws_secret_access_key=config.aws_secret_access_key,
             ).__aenter__()
 
     async def close_client(self):
@@ -38,7 +38,7 @@ class S3Repo:
             ContentType="image/jpeg"
         )
 
-        return f"{os.getenv('S3_PUBLIC_URL')}/{self.bucket_name}/{s3_key}"
+        return f"{config.s3_public_url}/{self.bucket_name}/{s3_key}"
 
 
 s3_repo = S3Repo()
