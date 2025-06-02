@@ -1,0 +1,9 @@
+aio_pika==9.5.5
+asyncpg==0.30.0
+protobuf==6.31.0
+psycopg2_binary==2.9.10
+PyJWT==2.10.1
+PyJWT==2.10.1
+python-dotenv==1.1.0
+bcrypt==4.3.0
+redis==5.2.1
