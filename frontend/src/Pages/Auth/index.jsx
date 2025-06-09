@@ -46,9 +46,10 @@ const AuthPage = () => {
       }
 
       if (isLogin) {
-        localStorage.setItem("isAuthenticated", "true");
-        localStorage.setItem("token", data.token);
-        navigate("/upload");
+      localStorage.setItem("isAuthenticated", "true");
+      localStorage.setItem("access_token", data.access_token);
+      localStorage.setItem("refresh_token", data.refresh_token);
+      navigate("/upload");
       } else {
         setIsLogin(true);
       }

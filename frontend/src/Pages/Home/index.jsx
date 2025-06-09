@@ -78,29 +78,64 @@ export default function PhotoUploadPage() {
       hue-rotate(${filters.hue}deg)
     `;
   };
+  function parseJwt(token) {
+    try {
+      const base64Url = token.split('.')[1];
+      const base64 = decodeURIComponent(atob(base64Url).split('').map(c =>
+          '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2)
+      ).join(''));
+      return JSON.parse(base64);
+    } catch (e) {
+      console.error('Не удалось распарсить токен:', e);
+      return null;
+    }
+  }
+
 
   const handleSave = async () => {
-    if (!imageId) {
-      alert('Сначала загрузите изображение.');
-      return;
-    }
+  if (!imageId) {
+    alert('Сначала загрузите изображение.');
+    return;
+  }
 
-    try {
-      const response = await axios.post('http://localhost/editphoto/filter/', {
-        image_id: imageId,
-        filters: filters,
-      });
+  const token = localStorage.getItem('access_token');
+  if (!token) {
+    alert('Токен не найден. Авторизуйтесь.');
+    return;
+  }
 
-      if (response.data.filtered_url) {
-        window.open(response.data.filtered_url, '_blank');
-      } else {
-        alert('Не удалось сохранить изображение.');
-      }
-    } catch (error) {
-      console.error('Ошибка при сохранении:', error);
-      alert('Произошла ошибка при сохранении изображения');
+  const payload = parseJwt(token);
+  const userId = payload?.user_id;
+  console.log(userId)
+  if (!userId) {
+    alert('Не удалось получить user_id из токена');
+    return;
+  }
+
+  try {
+    const filtersArray = Object.entries(filters).map(([type, value]) => ({
+      type,
+      value,
+    }));
+
+    const response = await axios.post('http://localhost/editphoto/filter/', {
+  user_id: userId,
+  image_url: previewUrl,
+  filters: filtersArray,
+});
+
+    if (response.data.filtered_url) {
+      window.open(response.data.filtered_url, '_blank');
+    } else {
+      alert('Не удалось сохранить изображение.');
     }
-  };
+  } catch (error) {
+    console.error('Ошибка при сохранении:', error.response?.data || error);
+    alert('Произошла ошибка при сохранении изображения');
+  }
+};
+
+
 
   const renderSlider = (label, type, min, max, step) => (
     <SliderGroup key={type}>
