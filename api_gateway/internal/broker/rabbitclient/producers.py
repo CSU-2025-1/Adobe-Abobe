@@ -113,6 +113,7 @@ AUTHORIZATION_QUEUE = "authorization"
 UPLOAD_IMAGE_QUEUE = "upload"
 FILTER_QUEUE = "filter"
 STORY_QUEUE = "filter_story"
+RESULT_QUEUE = "filtered"
 
 
 async def publish_rpc(routing_key: str, payload: dict, timeout: float = 30.0):
@@ -203,3 +204,23 @@ async def send_filters_message(filter_request: FilterRequest):
     except Exception as e:
         logging.info(f"[send_filters_message] RabbitMQ failed: {e}")
         return None
+
+
+async def send_filter_task_message(filter_request: FilterRequest, task_id: str):
+    channel = await get_channel()
+    payload = {
+        "user_id": filter_request.user_id,
+        "image_url": filter_request.image_url,
+        "filters": [f.dict() for f in filter_request.filters],
+        "task_id": task_id
+    }
+
+    await channel.default_exchange.publish(
+        aio_pika.Message(body=json.dumps(payload).encode()),
+        routing_key=FILTER_QUEUE
+    )
+
+
+async def send_get_filtered_message(task_id: str):
+    payload = {"task_id": task_id}
+    return await publish_rpc(RESULT_QUEUE, payload)

@@ -16,7 +16,7 @@ class S3Repo:
                 's3',
                 region_name=config.s3_region,
                 endpoint_url=config.s3_endpoint_url,
-                aws_access_key_id=config.aws_access_kry_id,
+                aws_access_key_id=config.aws_access_key_id,
                 aws_secret_access_key=config.aws_secret_access_key,
             ).__aenter__()
 
