@@ -17,6 +17,7 @@ UPLOAD_IMAGE_QUEUE = "upload"
 FILTER_QUEUE = "filter"
 STORY_QUEUE = "filter_story"
 RESULT_QUEUE = "filtered"
+REFRESH_QUEUE = "refresh"
 
 
 async def publish_rpc(routing_key: str, payload: dict, timeout: float = 5.0):
@@ -26,7 +27,6 @@ async def publish_rpc(routing_key: str, payload: dict, timeout: float = 5.0):
     future = asyncio.get_event_loop().create_future()
 
     async def on_response(message: aio_pika.IncomingMessage):
-        logging.debug(f"Received message with corr_id={message.correlation_id}")
         try:
             if message.correlation_id == correlation_id:
                 decoded = json.loads(message.body.decode())
@@ -74,6 +74,15 @@ async def send_validate_message(token: str):
         return await publish_rpc(VALIDATION_QUEUE, payload)
     except Exception as e:
         logging.warning(f"[send_auth_message] RabbitMQ failed: {e}")
+
+
+async def send_refresh_token(token: str, command: str):
+    payload = {"token": token, "command": command}
+
+    try:
+        return await publish_rpc(REFRESH_QUEUE, payload)
+    except Exception as e:
+        logging.warning(f"[send_refresh_token] RabbitMQ failed: {e}")
 
 
 async def send_upload_message(upload_request: UploadRequest):
