@@ -43,23 +43,27 @@ export const Button = styled.button`
 export const MainContent = styled.div`
   display: flex;
   width: 100%;
-  max-width: 100%;
+  max-width: 1600px;
+  margin: 0 auto;
+  gap: 40px;
 `;
 
+
 export const ImageArea = styled.div`
+  flex: 1; 
   display: flex;
-  align-items: flex-start;
+  justify-content: center;
 `;
 
 export const ImageWrapper = styled.div`
-  width: 1600px; 
-  height: 790px; 
+  width: 100%;
   border-radius: 10px;
   overflow: hidden;
+
   display: flex;
   justify-content: center;
   align-items: center;
-  margin-right: 40px;
+  margin-right: 30px;
 
   border: 2px solid #ccc;
   background-color: #f5f5f5;
@@ -107,11 +111,12 @@ export const Slider = styled.input`
 `;
 
 export const SlidersBlock = styled.div`
+  flex: 1; 
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  gap: 40px;
-  height: 700px;
+  gap: 30px;
+  padding-top: 10px;
 `;
 
 export const SliderGroup = styled.div`

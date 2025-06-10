@@ -133,6 +133,6 @@ async def send_filter_task_message(filter_request: FilterRequest, task_id: str):
     )
 
 
-async def send_get_filtered_message(task_id: str):
-    payload = {"task_id": task_id}
+async def send_get_filtered_message(operation_id: str):
+    payload = {"task_id": operation_id}
     return await publish_rpc(RESULT_QUEUE, payload)

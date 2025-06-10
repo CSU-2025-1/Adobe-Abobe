@@ -57,7 +57,13 @@ export default function PhotoUploadPage() {
   formData.append('file', selectedFile);
 
   try {
-    const response = await axios.post('http://localhost/image/upload', formData);
+    const token = localStorage.getItem('access_token');
+
+    const response = await axios.post('http://localhost/image/upload', formData, {
+      headers: {
+        Authorization: `Bearer ${token}`
+      }
+    });
 
     console.log('Ответ сервера:', response.data);
 
@@ -135,19 +141,27 @@ const handleSave = async () => {
     console.log(filtersArray)
 
     const response = await axios.post('http://localhost/image/filter', {
-      user_id: 0,
+      user_id: userId,
       image_url: previewUrl.replace('localhost', 'minio'),
       filters: filtersArray,
+    }, {
+      headers: {
+        Authorization: `Bearer ${token}`
+      }
     });
-
-    const taskId = response.data.task_id;
+    const operation_id = response.data.task_id;
 
     let retries = 0;
     const maxRetries = 20;
 
     const pollForResult = async () => {
       try {
-        const resultResponse = await axios.get(`http://localhost/image/operations/${taskId}`);
+        const resultResponse = await axios.get(`http://localhost/image/operations/${operation_id}`, {
+          headers: {
+            Authorization: `Bearer ${token}`
+          }
+        });
+
         if (resultResponse.data.status === 'done') {
           setLoading(false);
 
@@ -157,10 +171,8 @@ const handleSave = async () => {
           const timestamp = new Date().toISOString();
           const historyEntry = {
             timestamp,
-            filters: filtersArray,
-            image_url: filteredUrl
           };
-          localStorage.setItem(`history_${taskId}`, JSON.stringify(historyEntry));
+          localStorage.setItem(`history_${operation_id}`, JSON.stringify(historyEntry));
 
           const response = await fetch(filteredUrl, {
             mode: 'cors',
@@ -237,8 +249,8 @@ const handleSave = async () => {
             Загрузить
             <HiddenInput type="file" accept="image/*" onChange={handleUpload} />
           </UploadLabel>
-          <ArrowBackButton />
-          <ArrowForwardButton />
+          {/*<ArrowBackButton />*/}
+          {/*<ArrowForwardButton />*/}
           <Button onClick={handleSave}>Сохранить</Button>
         </TopButtons>
 

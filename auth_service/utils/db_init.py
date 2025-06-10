@@ -11,8 +11,7 @@ host = config.db_host
 class DBInit:
 
     def create_database_if_not_exists():
-        # подключение к постгре
-        conn = psycopg2.connect(dbname=dbname, user=user, password=password, host=host)
+        conn = psycopg2.connect(dbname="postgres", user=user, password=password, host=host)
         conn.set_isolation_level(ISOLATION_LEVEL_AUTOCOMMIT)
         cursor = conn.cursor()
 

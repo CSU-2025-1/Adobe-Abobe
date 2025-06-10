@@ -149,14 +149,14 @@ async def apply_filter(data: FilterRequest, credentials: HTTPAuthorizationCreden
 
 # Get Filtered Photo
 @router.get("/image/operations/{operation_id}")
-async def get_filtered(task_id: str, credentials: HTTPAuthorizationCredentials = Security(security)):
+async def get_filtered(operation_id: str, credentials: HTTPAuthorizationCredentials = Security(security)):
 
     token = credentials.credentials
     auth_validate = await send_validate_message(token)
 
     if auth_validate["valid"]:
         try:
-            result = await send_get_filtered_message(task_id)
+            result = await send_get_filtered_message(operation_id)
             return JSONResponse(content=result)
         except Exception as e:
             raise HTTPException(status_code=500, detail=f"Failed to get result: {str(e)}")
