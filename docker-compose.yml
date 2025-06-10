@@ -129,13 +129,13 @@ services:
 
 
 
-#  frontend:
-#    build: ./frontend
-#    container_name: frontend
-#    ports:
-#      - "3000:80"
-#    depends_on:
-#      - nginx
+  frontend:
+    build: ./frontend
+    container_name: frontend
+    ports:
+      - "3000:80"
+    depends_on:
+      - nginx
 
 volumes:
   postgres_data:

@@ -19,6 +19,7 @@ from internal.core.usecase.validate import validate_token
 
 VALIDATION_QUEUE = "validation"
 AUTHORIZATION_QUEUE = "authorization"
+REFRESH_QUEUE = "refresh"
 
 # dbname = config.db_name
 # user = config.db_user
@@ -117,7 +118,7 @@ async def consume_authorization(pg_repo, channel):
 
 
 async def consume_token_refresh(channel):
-    queue = await channel.declare_queue("refresh_token", durable=True)
+    queue = await channel.declare_queue(REFRESH_QUEUE, durable=True)
 
     async with queue.iterator() as queue_iter:
         async for message in queue_iter:

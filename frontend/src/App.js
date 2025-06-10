@@ -13,7 +13,7 @@ function App() {
           path="/"
           element={
             isAuthenticated ? (
-              <Navigate to="/upload" replace />
+              <Navigate to="/image/upload" replace />
             ) : (
               <Navigate to="/auth" replace />
             )

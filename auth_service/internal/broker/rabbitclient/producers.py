@@ -6,6 +6,7 @@ from internal.broker.rabbitclient.client import get_channel
 
 AUTH_RESPONSE_QUEUE = "auth_response"
 VALIDATION_TOKEN_QUEUE = "token"
+REFRESH_RESPONSE_QUEUE = "refresh"
 
 
 async def publish(routing_key: str, payload: dict):
@@ -41,3 +42,14 @@ async def send_validation_response(valid: bool, user_id: int):
         await publish(VALIDATION_TOKEN_QUEUE, payload)
     except Exception as e:
         logging.warning(f"[send_validation_response] RabbitMQ failed: {e}")
+
+async def refresh_response(access_token: str, refresh_token: str):
+    payload = {
+        "access_token": access_token,
+        "refresh_token": refresh_token,
+    }
+
+    try:
+        await publish(REFRESH_RESPONSE_QUEUE, payload)
+    except Exception as e:
+        logging.warning(f"[refresh_response] RabbitMQ failed: {e}")

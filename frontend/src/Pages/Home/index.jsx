@@ -57,7 +57,7 @@ export default function PhotoUploadPage() {
   formData.append('file', selectedFile);
 
   try {
-    const response = await axios.post('http://localhost/upload', formData);
+    const response = await axios.post('http://localhost/image/upload', formData);
 
     console.log('Ответ сервера:', response.data);
 
@@ -134,7 +134,7 @@ const handleSave = async () => {
     setLoading(true);
     console.log(filtersArray)
 
-    const response = await axios.post('http://localhost/filter', {
+    const response = await axios.post('http://localhost/image/filter', {
       user_id: 0,
       image_url: previewUrl.replace('localhost', 'minio'),
       filters: filtersArray,
@@ -147,7 +147,7 @@ const handleSave = async () => {
 
     const pollForResult = async () => {
       try {
-        const resultResponse = await axios.get(`http://localhost/filter/result/${taskId}`);
+        const resultResponse = await axios.get(`http://localhost/image/operations/${taskId}`);
         if (resultResponse.data.status === 'done') {
           setLoading(false);
 
