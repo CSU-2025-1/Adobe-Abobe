@@ -5,7 +5,7 @@ import logging
 import uuid
 import aio_pika
 
-from internal.broker.rabbitclient.client import get_channel, setup_callback_queue, _pending_futures, _callback_queue
+from internal.broker.rabbitclient.client import get_channel
 from internal.core.entity.auth.auth_dto import AuthRequest
 from internal.core.entity.upload.upload_dto import UploadRequest
 from internal.core.entity.filter.filter_dto import FilterRequest
@@ -20,14 +20,13 @@ RESULT_QUEUE = "filtered"
 
 
 async def publish_rpc(routing_key: str, payload: dict, timeout: float = 5.0):
-
     channel = await get_channel()
-    callback_queue = await channel.declare_queue(exclusive=True, auto_delete=True)
+    callback_queue = await channel.declare_queue(exclusive=True, auto_delete=True, durable=False)
     correlation_id = str(uuid.uuid4())
-
     future = asyncio.get_event_loop().create_future()
 
     async def on_response(message: aio_pika.IncomingMessage):
+        logging.debug(f"Received message with corr_id={message.correlation_id}")
         try:
             if message.correlation_id == correlation_id:
                 decoded = json.loads(message.body.decode())
@@ -37,7 +36,7 @@ async def publish_rpc(routing_key: str, payload: dict, timeout: float = 5.0):
             logging.error(f"Failed to process/ack message: {e}")
             await message.nack(requeue=False)
 
-    await callback_queue.consume(on_response)
+    consumer_tag = await callback_queue.consume(on_response)
 
     await channel.default_exchange.publish(
         aio_pika.Message(
@@ -45,14 +44,16 @@ async def publish_rpc(routing_key: str, payload: dict, timeout: float = 5.0):
             reply_to=callback_queue.name,
             correlation_id=correlation_id,
         ),
-        routing_key=routing_key,
+        routing_key=routing_key
     )
 
     try:
         result = await asyncio.wait_for(future, timeout=timeout)
+        await callback_queue.cancel(consumer_tag)
         await callback_queue.delete()
         return result
     except asyncio.TimeoutError:
+        await callback_queue.cancel(consumer_tag)
         await callback_queue.delete()
         raise Exception("RPC timeout")
 
