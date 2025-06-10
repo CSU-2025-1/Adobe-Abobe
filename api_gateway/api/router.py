@@ -15,7 +15,8 @@ from internal.broker.rabbitclient.producers import (
     send_upload_message,
     send_filter_task_message,
     send_get_filtered_message,
-    send_story_message
+    send_story_message,
+    send_refresh_token
 )
 
 
@@ -48,6 +49,16 @@ async def login(data: AuthRequest):
         }
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.post("/auth/refresh")
+async def refresh(token: str):
+    try:
+        command = "refresh"
+        response = await send_refresh_token(token, command)
+        return JSONResponse(content=response)
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"error refresh token: {str(e)}")
 
 
 # Upload
