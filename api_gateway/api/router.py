@@ -15,7 +15,9 @@ from internal.broker.rabbitclient.producers import (
     send_upload_message,
     send_filter_task_message,
     send_get_filtered_message,
+    send_story_message
 )
+
 
 router = APIRouter()
 security = HTTPBearer()
@@ -49,50 +51,46 @@ async def login(data: AuthRequest):
 
 
 # Upload
-@router.post("/upload")
-async def upload_file(file: UploadFile = File(...)):
-    # async def upload_file(file: UploadFile = File(...), credentials: HTTPAuthorizationCredentials = Security(security)):
+@router.post("/image/upload")
+async def upload_file(file: UploadFile = File(...), credentials: HTTPAuthorizationCredentials = Security(security)):
 
-    # token = credentials.credentials
-    #
-    # auth_validate = await send_validate_message(token)
-    #
-    # if auth_validate["valid"]:
-    try:
-        file_data = await file.read()
-        logging.info(f"file name: {file.filename}")
-        logging.info(f"file ct: {file.content_type}")
-
-        image_data = UploadRequest(
-            content=file_data,
-            filename=file.filename,
-            content_type=file.content_type,
-            user_id="111",
-        )
-
-        response = await send_upload_message(image_data)
-        logging.info(f"[gateway] got response from upload-service: {response}")
-
-        if response["status"] == "success":
-            return {
-                "image_id": response["image_id"],
-                "image_url": response["image_url"],
-            }
-        else:
-            raise HTTPException(status_code=500, detail="File upload failed")
-
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"error: {str(e)}")
-
-
-# else:
-#     raise HTTPException(status_code=401, detail="Invalid token")
-
-
-@router.post("/story")
-async def get_user_story(data: StoryRequest, credentials: HTTPAuthorizationCredentials = Security(security)):
     token = credentials.credentials
+    auth_validate = await send_validate_message(token)
 
+    if auth_validate["valid"]:
+        try:
+            file_data = await file.read()
+            logging.info(f"file name: {file.filename}")
+            logging.info(f"file ct: {file.content_type}")
+
+            image_data = UploadRequest(
+                content=file_data,
+                filename=file.filename,
+                content_type=file.content_type,
+                user_id="111",
+            )
+
+            response = await send_upload_message(image_data)
+            logging.info(f"[gateway] got response from upload-service: {response}")
+
+            if response["status"] == "success":
+                return {
+                    "image_id": response["image_id"],
+                    "image_url": response["image_url"],
+                }
+            else:
+                raise HTTPException(status_code=500, detail="File upload failed")
+
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"error: {str(e)}")
+    else:
+        raise HTTPException(status_code=401, detail="Invalid token")
+
+
+@router.post("/image/story")
+async def get_user_story(data: StoryRequest, credentials: HTTPAuthorizationCredentials = Security(security)):
+
+    token = credentials.credentials
     auth_validate = await send_validate_message(token)
 
     if auth_validate["valid"]:
@@ -116,59 +114,40 @@ async def get_user_story(data: StoryRequest, credentials: HTTPAuthorizationCrede
         raise HTTPException(status_code=401, detail="Invalid token")
 
 
-# Edit Photo
-# @router.post("/editphoto/filter/")
-# async def apply_filter(data: FilterRequest):
-#     try:
-#         response = await send_filters_message(data)
-#         if not response:
-#             raise HTTPException(status_code=500, detail="Filter service returned no response")
-#         return {
-#             "filtered_url": response["filtered_url"],
-#             "timestamp": response["timestamp"],
-#             "filters": response["filters"]
-#         }
-#     except Exception as e:
-#         raise HTTPException(status_code=500, detail=f"error: {str(e)}")
+@router.post("/image/filter")
+async def apply_filter(data: FilterRequest, credentials: HTTPAuthorizationCredentials = Security(security)):
 
-@router.post("/filter")
-async def apply_filter(data: FilterRequest):
-    try:
-        task_id = uuid.uuid4().hex
+    token = credentials.credentials
+    auth_validate = await send_validate_message(token)
 
-        await send_filter_task_message(data, task_id)
+    if auth_validate["valid"]:
+        try:
+            task_id = uuid.uuid4().hex
 
-        return JSONResponse(
-            content={"status": "processing", "task_id": task_id},
-            status_code=202
-        )
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"error: {str(e)}")
+            await send_filter_task_message(data, task_id)
+
+            return JSONResponse(
+                content={"status": "processing", "task_id": task_id},
+                status_code=202
+            )
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"error: {str(e)}")
+    else:
+        raise HTTPException(status_code=401, detail="Invalid token")
 
 
-# Get Filtred Photo
-@router.get("/filter/result/{task_id}")
-async def get_filtered(task_id: str):
-    try:
-        result = await send_get_filtered_message(task_id)
-        return JSONResponse(content=result)
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to get result: {str(e)}")
+# Get Filtered Photo
+@router.get("/image/operations/{operation_id}")
+async def get_filtered(task_id: str, credentials: HTTPAuthorizationCredentials = Security(security)):
 
-# @router.post("/editphoto/filter")
-# async def apply_filter(data: FilterRequest, credentials: HTTPAuthorizationCredentials = Security(security)):
-#
-#     token = credentials.credentials
-#
-#     auth_validate = await send_validate_message(token)
-#
-#     if auth_validate["valid"]:
-#         try:
-#             response = await send_filters_message(data)
-#             return {
-#                 "filtered_url": response["filtered_url"]
-#             }
-#         except Exception as e:
-#             raise HTTPException(status_code=500, detail=f"error: {str(e)}")
-#     else:
-#         raise HTTPException(status_code=401, detail="Invalid token")
+    token = credentials.credentials
+    auth_validate = await send_validate_message(token)
+
+    if auth_validate["valid"]:
+        try:
+            result = await send_get_filtered_message(task_id)
+            return JSONResponse(content=result)
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"Failed to get result: {str(e)}")
+    else:
+        raise HTTPException(status_code=401, detail="Invalid token")
