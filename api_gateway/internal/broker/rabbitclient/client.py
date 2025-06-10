@@ -4,6 +4,7 @@ from config.config import cfg
 
 RABBIT_URL = f"amqp://{cfg.RABBITMQ_USER}:{cfg.RABBITMQ_PASS}@{cfg.RABBITMQ_HOST}:{cfg.RABBITMQ_PORT}/"
 _connection = None
+_channel = None
 
 
 async def get_connection():
@@ -14,5 +15,9 @@ async def get_connection():
 
 
 async def get_channel():
-    connection = await get_connection()
-    return await connection.channel()
+    global _channel
+    if _channel is None or _channel.is_closed:
+        conn = await get_connection()
+        _channel = await conn.channel()
+        await _channel.set_qos(prefetch_count=10)
+    return _channel
